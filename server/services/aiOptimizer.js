@@ -7,8 +7,11 @@ const API_KEY = process.env.LLM_API_KEY || process.env.OPENAI_API_KEY;
 const BASE_URL = process.env.LLM_BASE_URL || process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
 const MODEL = process.env.LLM_MODEL || 'gpt-4o-mini';
 
+// 单次 API 调用超时时间（60秒）
+const API_TIMEOUT = 60000;
+
 /**
- * 调用 LLM API
+ * 调用 LLM API（带超时控制）
  */
 async function callLLM(prompt, maxTokens = 4000) {
     if (!API_KEY) {
@@ -16,44 +19,58 @@ async function callLLM(prompt, maxTokens = 4000) {
         return getMockResponse(prompt);
     }
 
-    const response = await fetch(`${BASE_URL}/chat/completions`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${API_KEY}`
-        },
-        body: JSON.stringify({
-            model: MODEL,
-            messages: [
-                { role: 'system', content: '你是一位专业的简历优化专家，擅长根据目标职位要求优化简历，帮助求职者提高简历匹配度。' },
-                { role: 'user', content: prompt }
-            ],
-            max_tokens: maxTokens,
-            temperature: 0.7
-        })
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error?.message || 'AI 服务调用失败');
+    try {
+        const response = await fetch(`${BASE_URL}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${API_KEY}`
+            },
+            body: JSON.stringify({
+                model: MODEL,
+                messages: [
+                    { role: 'system', content: '你是一位专业的简历优化专家，擅长根据目标职位要求优化简历，帮助求职者提高简历匹配度。请简洁高效地完成任务。' },
+                    { role: 'user', content: prompt }
+                ],
+                max_tokens: maxTokens,
+                temperature: 0.7
+            }),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error?.message || `AI 服务返回 ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.choices[0].message.content;
+    } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+            throw new Error('AI 服务响应超时，请稍后重试');
+        }
+        throw error;
     }
-
-    const data = await response.json();
-    return data.choices[0].message.content;
 }
 
 /**
- * 优化简历
+ * 优化简历（并行调用 AI，大幅缩短等待时间）
  */
 async function optimize(resume, jd, configs) {
-    // 1. 分析匹配度
-    const analysis = await analyzeMatch(resume, jd);
+    // 并行执行：分析匹配度 + 生成3个版本
+    const [analysis, versions] = await Promise.all([
+        analyzeMatch(resume, jd),
+        generateVersions(resume, jd, configs)
+    ]);
     
-    // 2. 生成优化建议
+    // 用分析结果生成优化建议
     const suggestions = await generateSuggestions(resume, jd, analysis);
-    
-    // 3. 生成多个版本的优化简历
-    const versions = await generateVersions(resume, jd, configs);
     
     return {
         score: analysis.score,
@@ -154,24 +171,16 @@ ${jd.substring(0, 800)}
 }
 
 /**
- * 生成多个版本的优化简历
+ * 生成多个版本的优化简历（并行生成）
  */
 async function generateVersions(resume, jd, configs) {
-    const versions = [];
+    const [version1, version2, version3] = await Promise.all([
+        generateVersion(resume, jd, 'skill'),
+        generateVersion(resume, jd, 'project'),
+        generateVersion(resume, jd, 'concise')
+    ]);
     
-    // 版本一：突出技能匹配
-    const version1 = await generateVersion(resume, jd, 'skill');
-    versions.push(version1);
-    
-    // 版本二：突出项目经验
-    const version2 = await generateVersion(resume, jd, 'project');
-    versions.push(version2);
-    
-    // 版本三：精简一页版
-    const version3 = await generateVersion(resume, jd, 'concise');
-    versions.push(version3);
-    
-    return versions;
+    return [version1, version2, version3];
 }
 
 /**

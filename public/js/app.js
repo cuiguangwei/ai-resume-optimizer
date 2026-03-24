@@ -235,6 +235,25 @@ async function startOptimize() {
 
     showLoading('AI 正在分析你的简历...', '正在对比简历与岗位要求，生成优化建议');
 
+    // 动态更新进度提示
+    const progressMessages = [
+        { time: 5000, text: 'AI 正在深度分析...', sub: '正在生成多个优化版本' },
+        { time: 15000, text: '正在生成优化方案...', sub: '已完成分析，正在优化简历表述' },
+        { time: 30000, text: '即将完成...', sub: '正在精修最终版本，请耐心等待' },
+        { time: 60000, text: '还在处理中...', sub: '简历内容较多，AI 需要更多时间' },
+        { time: 90000, text: '快好了...', sub: '正在做最后的检查和优化' }
+    ];
+    const progressTimers = progressMessages.map(msg => 
+        setTimeout(() => {
+            document.getElementById('loading-text').textContent = msg.text;
+            document.getElementById('loading-sub').textContent = msg.sub;
+        }, msg.time)
+    );
+
+    // 3 分钟总超时
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 180000);
+
     try {
         const res = await fetch('/api/optimize', {
             method: 'POST',
@@ -243,11 +262,15 @@ async function startOptimize() {
                 resume: state.resumeText,
                 jd: state.jdText,
                 configs: state.configs
-            })
+            }),
+            signal: controller.signal
         });
 
+        clearTimeout(timeoutId);
+        progressTimers.forEach(t => clearTimeout(t));
+
         if (!res.ok) {
-            const err = await res.json();
+            const err = await res.json().catch(() => ({}));
             throw new Error(err.error || '优化请求失败');
         }
 
@@ -257,8 +280,14 @@ async function startOptimize() {
         goToStep(3);
         showToast('简历优化完成', 'success');
     } catch (err) {
+        clearTimeout(timeoutId);
+        progressTimers.forEach(t => clearTimeout(t));
         hideLoading();
-        showToast(err.message || '优化失败，请稍后重试', 'error');
+        if (err.name === 'AbortError') {
+            showToast('请求超时，请稍后重试。建议缩短简历或JD长度后再试', 'error');
+        } else {
+            showToast(err.message || '优化失败，请稍后重试', 'error');
+        }
         console.error(err);
     }
 }
