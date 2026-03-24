@@ -85,13 +85,19 @@ ${jd}
 
     try {
         const response = await callLLM(prompt, 1000);
-        const jsonMatch = response.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-            return JSON.parse(jsonMatch[0]);
+        // 尝试直接解析
+        try {
+            return JSON.parse(response);
+        } catch (e) {
+            // 尝试从响应中提取 JSON
+            const jsonMatch = response.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                return JSON.parse(jsonMatch[0]);
+            }
         }
         return { score: 60, matched_skills: [], missing_skills: [], analysis: '分析完成' };
     } catch (error) {
-        console.error('分析匹配度失败:', error);
+        console.error('分析匹配度失败:', error.message);
         return { score: 60, matched_skills: [], missing_skills: [], analysis: '分析完成' };
     }
 }
@@ -122,12 +128,19 @@ ${jd.substring(0, 800)}
 
     try {
         const response = await callLLM(prompt, 1500);
-        const jsonMatch = response.match(/\[[\s\S]*\]/);
-        if (jsonMatch) {
-            return JSON.parse(jsonMatch[0]);
+        // 尝试直接解析
+        try {
+            const parsed = JSON.parse(response);
+            if (Array.isArray(parsed)) return parsed;
+        } catch (e) {
+            // 尝试从响应中提取 JSON 数组
+            const jsonMatch = response.match(/\[[\s\S]*\]/);
+            if (jsonMatch) {
+                return JSON.parse(jsonMatch[0]);
+            }
         }
     } catch (error) {
-        console.error('生成建议失败:', error);
+        console.error('生成建议失败:', error.message);
     }
     
     // 默认建议

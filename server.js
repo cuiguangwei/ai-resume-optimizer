@@ -124,8 +124,12 @@ app.use((err, req, res, next) => {
 
 // 启动服务
 app.listen(PORT, () => {
+    const apiKey = process.env.LLM_API_KEY || process.env.OPENAI_API_KEY;
     console.log(`\n🚀 AI 简历优化器服务已启动`);
     console.log(`📍 本地访问: http://localhost:${PORT}`);
     console.log(`📁 上传目录: ${path.resolve(uploadDir)}`);
-    console.log(`🔧 环境: ${process.env.NODE_ENV || 'development'}\n`);
+    console.log(`🔧 环境: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔑 API Key: ${apiKey ? '已配置 (' + apiKey.substring(0, 6) + '...)' : '未配置（将使用模拟数据）'}`);
+    console.log(`🌐 Base URL: ${process.env.LLM_BASE_URL || process.env.OPENAI_BASE_URL || '未配置'}`);
+    console.log(`🤖 Model: ${process.env.LLM_MODEL || '未配置'}\n`);
 });
