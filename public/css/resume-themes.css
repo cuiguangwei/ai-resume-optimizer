@@ -1,0 +1,896 @@
+/* ============================================================
+   简历模板主题系统 - 多行业高端设计风格
+   ============================================================ */
+
+/* 风格选择器 */
+.theme-selector {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.theme-btn {
+    padding: 8px 18px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 13px;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.theme-btn .theme-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.theme-btn.active {
+    color: white;
+    border-color: transparent;
+}
+
+.theme-btn:hover:not(.active) {
+    border-color: var(--border-light);
+    color: var(--text-primary);
+}
+
+/* 科技风 */
+.theme-btn[data-theme="tech"] .theme-dot { background: linear-gradient(135deg, #4F46E5, #06B6D4); }
+.theme-btn[data-theme="tech"].active { background: linear-gradient(135deg, #4F46E5, #3730A3); }
+
+/* 金融风 */
+.theme-btn[data-theme="finance"] .theme-dot { background: linear-gradient(135deg, #1a2332, #C9A84C); }
+.theme-btn[data-theme="finance"].active { background: linear-gradient(135deg, #1a2332, #2a3a52); }
+
+/* 创意风 */
+.theme-btn[data-theme="creative"] .theme-dot { background: linear-gradient(135deg, #EC4899, #F97316); }
+.theme-btn[data-theme="creative"].active { background: linear-gradient(135deg, #EC4899, #DB2777); }
+
+/* 医疗风 */
+.theme-btn[data-theme="medical"] .theme-dot { background: linear-gradient(135deg, #059669, #34D399); }
+.theme-btn[data-theme="medical"].active { background: linear-gradient(135deg, #059669, #047857); }
+
+/* 经典风 */
+.theme-btn[data-theme="classic"] .theme-dot { background: linear-gradient(135deg, #374151, #6B7280); }
+.theme-btn[data-theme="classic"].active { background: linear-gradient(135deg, #374151, #1F2937); }
+
+/* ============================================================
+   简历预览容器 - 通用
+   ============================================================ */
+.resume-preview {
+    background: white;
+    color: #1a1a1a;
+    border-radius: var(--radius);
+    max-height: 700px;
+    overflow-y: auto;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+    position: relative;
+}
+
+.resume-preview .resume-inner {
+    padding: 0;
+}
+
+/* A4 纸张比例感 */
+.resume-preview::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
+    border-radius: var(--radius);
+    z-index: 1;
+}
+
+/* ============================================================
+   主题 1: 科技风 (Tech) — 适合 IT / 互联网 / 工程
+   ============================================================ */
+.resume-preview.theme-tech {
+    background: #ffffff;
+    font-family: 'Inter', 'Noto Sans SC', -apple-system, sans-serif;
+}
+
+.resume-preview.theme-tech .resume-header {
+    background: linear-gradient(135deg, #1e1b4b, #312e81, #3730a3);
+    color: white;
+    padding: 36px 40px 28px;
+    position: relative;
+    overflow: hidden;
+}
+
+.resume-preview.theme-tech .resume-header::after {
+    content: '';
+    position: absolute;
+    top: -30%;
+    right: -10%;
+    width: 250px;
+    height: 250px;
+    background: radial-gradient(circle, rgba(99,102,241,0.3) 0%, transparent 70%);
+    border-radius: 50%;
+}
+
+.resume-preview.theme-tech .resume-header::before {
+    content: '';
+    position: absolute;
+    bottom: -40%;
+    left: 20%;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(6,182,212,0.2) 0%, transparent 70%);
+    border-radius: 50%;
+}
+
+.resume-preview.theme-tech .resume-header h1 {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+    position: relative;
+    z-index: 1;
+}
+
+.resume-preview.theme-tech .resume-header .contact-info {
+    font-size: 13px;
+    color: rgba(255,255,255,0.75);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    position: relative;
+    z-index: 1;
+}
+
+.resume-preview.theme-tech .resume-header .contact-info span::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    background: #818CF8;
+    border-radius: 50%;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+.resume-preview.theme-tech .resume-body {
+    padding: 28px 40px 36px;
+}
+
+.resume-preview.theme-tech .resume-section {
+    margin-bottom: 24px;
+}
+
+.resume-preview.theme-tech .section-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #4F46E5;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #E5E7EB;
+    margin-bottom: 16px;
+    position: relative;
+}
+
+.resume-preview.theme-tech .section-title::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 50px;
+    height: 2px;
+    background: linear-gradient(90deg, #4F46E5, #06B6D4);
+}
+
+.resume-preview.theme-tech .experience-item {
+    margin-bottom: 16px;
+    padding-left: 16px;
+    border-left: 2px solid #E5E7EB;
+}
+
+.resume-preview.theme-tech .experience-item:hover {
+    border-left-color: #4F46E5;
+}
+
+.resume-preview.theme-tech .exp-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.resume-preview.theme-tech .exp-company {
+    font-size: 15px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.resume-preview.theme-tech .exp-date {
+    font-size: 12px;
+    color: #6B7280;
+    background: #F3F4F6;
+    padding: 2px 10px;
+    border-radius: 10px;
+}
+
+.resume-preview.theme-tech .exp-role {
+    font-size: 13px;
+    color: #4F46E5;
+    font-weight: 500;
+    margin-bottom: 6px;
+}
+
+.resume-preview.theme-tech ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.resume-preview.theme-tech li {
+    font-size: 13px;
+    color: #374151;
+    line-height: 1.7;
+    padding: 2px 0 2px 18px;
+    position: relative;
+}
+
+.resume-preview.theme-tech li::before {
+    content: '>';
+    position: absolute;
+    left: 0;
+    color: #4F46E5;
+    font-weight: 700;
+    font-size: 12px;
+}
+
+.resume-preview.theme-tech .skill-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.resume-preview.theme-tech .skill-tag {
+    font-size: 12px;
+    padding: 4px 12px;
+    background: linear-gradient(135deg, rgba(79,70,229,0.08), rgba(6,182,212,0.08));
+    color: #4338CA;
+    border-radius: 4px;
+    font-weight: 500;
+    border: 1px solid rgba(79,70,229,0.15);
+}
+
+/* ============================================================
+   主题 2: 金融风 (Finance) — 适合金融 / 咨询 / 法律
+   ============================================================ */
+.resume-preview.theme-finance {
+    background: #FEFDFB;
+    font-family: 'Georgia', 'Noto Sans SC', serif;
+}
+
+.resume-preview.theme-finance .resume-header {
+    padding: 40px 44px 28px;
+    border-bottom: 3px double #C9A84C;
+    text-align: center;
+}
+
+.resume-preview.theme-finance .resume-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1a2332;
+    letter-spacing: 6px;
+    margin-bottom: 12px;
+}
+
+.resume-preview.theme-finance .resume-header .contact-info {
+    font-size: 13px;
+    color: #6B7280;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 20px;
+    font-family: 'Inter', sans-serif;
+}
+
+.resume-preview.theme-finance .resume-header .contact-info span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.resume-preview.theme-finance .resume-header .contact-info span::before {
+    content: '\2022';
+    color: #C9A84C;
+    font-size: 8px;
+}
+
+.resume-preview.theme-finance .resume-body {
+    padding: 28px 44px 40px;
+}
+
+.resume-preview.theme-finance .resume-section {
+    margin-bottom: 28px;
+}
+
+.resume-preview.theme-finance .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1a2332;
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    text-align: center;
+    margin-bottom: 16px;
+    position: relative;
+    font-family: 'Inter', sans-serif;
+}
+
+.resume-preview.theme-finance .section-title::before,
+.resume-preview.theme-finance .section-title::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 60px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #C9A84C);
+}
+
+.resume-preview.theme-finance .section-title::before { left: 0; }
+.resume-preview.theme-finance .section-title::after {
+    right: 0;
+    background: linear-gradient(90deg, #C9A84C, transparent);
+}
+
+.resume-preview.theme-finance .experience-item {
+    margin-bottom: 18px;
+}
+
+.resume-preview.theme-finance .exp-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #E5E7EB;
+}
+
+.resume-preview.theme-finance .exp-company {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1a2332;
+}
+
+.resume-preview.theme-finance .exp-date {
+    font-size: 12px;
+    color: #9CA3AF;
+    font-family: 'Inter', sans-serif;
+    font-style: italic;
+}
+
+.resume-preview.theme-finance .exp-role {
+    font-size: 13px;
+    color: #92702E;
+    font-weight: 600;
+    margin-bottom: 6px;
+    font-family: 'Inter', sans-serif;
+}
+
+.resume-preview.theme-finance ul {
+    list-style: none;
+    padding: 0;
+}
+
+.resume-preview.theme-finance li {
+    font-size: 13.5px;
+    color: #374151;
+    line-height: 1.75;
+    padding: 2px 0 2px 20px;
+    position: relative;
+}
+
+.resume-preview.theme-finance li::before {
+    content: '\2014';
+    position: absolute;
+    left: 0;
+    color: #C9A84C;
+}
+
+.resume-preview.theme-finance .skill-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+}
+
+.resume-preview.theme-finance .skill-tag {
+    font-size: 12px;
+    padding: 4px 14px;
+    background: transparent;
+    color: #1a2332;
+    border: 1px solid #D4C89A;
+    border-radius: 2px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+}
+
+/* ============================================================
+   主题 3: 创意风 (Creative) — 适合设计 / 营销 / 媒体
+   ============================================================ */
+.resume-preview.theme-creative {
+    background: #ffffff;
+    font-family: 'Inter', 'Noto Sans SC', sans-serif;
+}
+
+.resume-preview.theme-creative .resume-header {
+    background: linear-gradient(135deg, #FDF2F8, #FFF7ED, #F5F3FF);
+    padding: 36px 40px 28px;
+    position: relative;
+    overflow: hidden;
+}
+
+.resume-preview.theme-creative .resume-header::before {
+    content: '';
+    position: absolute;
+    top: -50px;
+    right: -50px;
+    width: 180px;
+    height: 180px;
+    background: linear-gradient(135deg, rgba(236,72,153,0.15), rgba(249,115,22,0.1));
+    border-radius: 50%;
+}
+
+.resume-preview.theme-creative .resume-header::after {
+    content: '';
+    position: absolute;
+    bottom: -30px;
+    left: 10%;
+    width: 120px;
+    height: 120px;
+    background: linear-gradient(135deg, rgba(139,92,246,0.1), rgba(236,72,153,0.08));
+    border-radius: 50%;
+}
+
+.resume-preview.theme-creative .resume-header h1 {
+    font-size: 30px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #EC4899, #F97316);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+    position: relative;
+    z-index: 1;
+}
+
+.resume-preview.theme-creative .resume-header .contact-info {
+    font-size: 13px;
+    color: #6B7280;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    position: relative;
+    z-index: 1;
+}
+
+.resume-preview.theme-creative .resume-header .contact-info span::before {
+    content: '\2726';
+    margin-right: 6px;
+    color: #EC4899;
+    font-size: 10px;
+}
+
+.resume-preview.theme-creative .resume-body {
+    padding: 28px 40px 36px;
+}
+
+.resume-preview.theme-creative .resume-section {
+    margin-bottom: 24px;
+}
+
+.resume-preview.theme-creative .section-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1F2937;
+    margin-bottom: 14px;
+    padding-left: 14px;
+    border-left: 4px solid;
+    border-image: linear-gradient(to bottom, #EC4899, #F97316) 1;
+}
+
+.resume-preview.theme-creative .experience-item {
+    margin-bottom: 16px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: #FAFAFA;
+    transition: background 0.2s ease;
+}
+
+.resume-preview.theme-creative .experience-item:hover {
+    background: #FDF2F8;
+}
+
+.resume-preview.theme-creative .exp-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.resume-preview.theme-creative .exp-company {
+    font-size: 15px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.resume-preview.theme-creative .exp-date {
+    font-size: 12px;
+    color: white;
+    background: linear-gradient(135deg, #EC4899, #F97316);
+    padding: 2px 10px;
+    border-radius: 10px;
+}
+
+.resume-preview.theme-creative .exp-role {
+    font-size: 13px;
+    color: #DB2777;
+    font-weight: 500;
+    margin-bottom: 6px;
+}
+
+.resume-preview.theme-creative ul {
+    list-style: none;
+    padding: 0;
+}
+
+.resume-preview.theme-creative li {
+    font-size: 13px;
+    color: #374151;
+    line-height: 1.7;
+    padding: 2px 0 2px 20px;
+    position: relative;
+}
+
+.resume-preview.theme-creative li::before {
+    content: '\2605';
+    position: absolute;
+    left: 0;
+    color: #F97316;
+    font-size: 10px;
+    top: 5px;
+}
+
+.resume-preview.theme-creative .skill-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.resume-preview.theme-creative .skill-tag {
+    font-size: 12px;
+    padding: 5px 14px;
+    background: linear-gradient(135deg, rgba(236,72,153,0.1), rgba(249,115,22,0.08));
+    color: #BE185D;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+/* ============================================================
+   主题 4: 医疗风 (Medical) — 适合医疗 / 生物 / 科研
+   ============================================================ */
+.resume-preview.theme-medical {
+    background: #FAFFFE;
+    font-family: 'Inter', 'Noto Sans SC', sans-serif;
+}
+
+.resume-preview.theme-medical .resume-header {
+    background: linear-gradient(135deg, #064E3B, #065F46, #047857);
+    color: white;
+    padding: 36px 40px 28px;
+    position: relative;
+}
+
+.resume-preview.theme-medical .resume-header::after {
+    content: '+';
+    position: absolute;
+    top: 16px;
+    right: 36px;
+    font-size: 80px;
+    font-weight: 200;
+    color: rgba(255,255,255,0.08);
+    line-height: 1;
+}
+
+.resume-preview.theme-medical .resume-header h1 {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    margin-bottom: 8px;
+}
+
+.resume-preview.theme-medical .resume-header .contact-info {
+    font-size: 13px;
+    color: rgba(255,255,255,0.7);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.resume-preview.theme-medical .resume-header .contact-info span::before {
+    content: '|';
+    margin-right: 8px;
+    color: #34D399;
+}
+
+.resume-preview.theme-medical .resume-body {
+    padding: 28px 40px 36px;
+}
+
+.resume-preview.theme-medical .resume-section {
+    margin-bottom: 24px;
+}
+
+.resume-preview.theme-medical .section-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #065F46;
+    letter-spacing: 2px;
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #D1FAE5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.resume-preview.theme-medical .section-title::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: #10B981;
+    border-radius: 50%;
+}
+
+.resume-preview.theme-medical .experience-item {
+    margin-bottom: 16px;
+    padding-left: 14px;
+    border-left: 3px solid #D1FAE5;
+}
+
+.resume-preview.theme-medical .exp-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.resume-preview.theme-medical .exp-company {
+    font-size: 15px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.resume-preview.theme-medical .exp-date {
+    font-size: 12px;
+    color: #6B7280;
+}
+
+.resume-preview.theme-medical .exp-role {
+    font-size: 13px;
+    color: #059669;
+    font-weight: 500;
+    margin-bottom: 6px;
+}
+
+.resume-preview.theme-medical ul {
+    list-style: none;
+    padding: 0;
+}
+
+.resume-preview.theme-medical li {
+    font-size: 13px;
+    color: #374151;
+    line-height: 1.75;
+    padding: 2px 0 2px 18px;
+    position: relative;
+}
+
+.resume-preview.theme-medical li::before {
+    content: '+';
+    position: absolute;
+    left: 0;
+    color: #10B981;
+    font-weight: 700;
+}
+
+.resume-preview.theme-medical .skill-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.resume-preview.theme-medical .skill-tag {
+    font-size: 12px;
+    padding: 4px 12px;
+    background: #ECFDF5;
+    color: #065F46;
+    border-radius: 4px;
+    font-weight: 500;
+    border: 1px solid #D1FAE5;
+}
+
+/* ============================================================
+   主题 5: 经典风 (Classic) — 通用 / 政务 / 教育
+   ============================================================ */
+.resume-preview.theme-classic {
+    background: #ffffff;
+    font-family: 'Noto Sans SC', 'Inter', -apple-system, sans-serif;
+}
+
+.resume-preview.theme-classic .resume-header {
+    padding: 40px 44px 24px;
+    text-align: center;
+    border-bottom: 2px solid #111827;
+}
+
+.resume-preview.theme-classic .resume-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #111827;
+    letter-spacing: 8px;
+    margin-bottom: 12px;
+}
+
+.resume-preview.theme-classic .resume-header .contact-info {
+    font-size: 13px;
+    color: #4B5563;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 24px;
+}
+
+.resume-preview.theme-classic .resume-header .contact-info span::before {
+    content: '\00B7';
+    margin-right: 6px;
+    font-weight: bold;
+}
+
+.resume-preview.theme-classic .resume-body {
+    padding: 24px 44px 40px;
+}
+
+.resume-preview.theme-classic .resume-section {
+    margin-bottom: 24px;
+}
+
+.resume-preview.theme-classic .section-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #111827;
+    letter-spacing: 4px;
+    margin-bottom: 14px;
+    padding: 6px 0;
+    border-top: 1px solid #D1D5DB;
+    border-bottom: 1px solid #D1D5DB;
+    text-align: center;
+}
+
+.resume-preview.theme-classic .experience-item {
+    margin-bottom: 16px;
+}
+
+.resume-preview.theme-classic .exp-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.resume-preview.theme-classic .exp-company {
+    font-size: 15px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.resume-preview.theme-classic .exp-date {
+    font-size: 13px;
+    color: #6B7280;
+}
+
+.resume-preview.theme-classic .exp-role {
+    font-size: 13px;
+    color: #4B5563;
+    font-weight: 500;
+    margin-bottom: 6px;
+}
+
+.resume-preview.theme-classic ul {
+    list-style: none;
+    padding: 0;
+}
+
+.resume-preview.theme-classic li {
+    font-size: 13.5px;
+    color: #374151;
+    line-height: 1.8;
+    padding: 2px 0 2px 20px;
+    position: relative;
+}
+
+.resume-preview.theme-classic li::before {
+    content: '\25CF';
+    position: absolute;
+    left: 4px;
+    color: #374151;
+    font-size: 6px;
+    top: 10px;
+}
+
+.resume-preview.theme-classic .skill-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+}
+
+.resume-preview.theme-classic .skill-tag {
+    font-size: 12px;
+    padding: 3px 12px;
+    background: #F3F4F6;
+    color: #1F2937;
+    border-radius: 2px;
+    font-weight: 500;
+}
+
+/* ============================================================
+   通用 Markdown 渲染 fallback（如果结构化解析失败）
+   ============================================================ */
+.resume-preview h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; color: #111; }
+.resume-preview h2 { font-size: 15px; font-weight: 600; color: #4F46E5; margin: 20px 0 10px; padding-bottom: 6px; border-bottom: 2px solid #E5E7EB; }
+.resume-preview h3 { font-size: 15px; font-weight: 600; color: #111; margin: 12px 0 4px; }
+.resume-preview p { font-size: 13.5px; color: #374151; margin-bottom: 8px; line-height: 1.7; }
+
+/* 通用 strong 高亮 */
+.resume-preview strong { color: #111827; }
+
+/* ============================================================
+   打印优化
+   ============================================================ */
+@media print {
+    .resume-preview {
+        box-shadow: none;
+        max-height: none;
+        border-radius: 0;
+    }
+}
+
+/* ============================================================
+   响应式
+   ============================================================ */
+@media (max-width: 768px) {
+    .theme-selector {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 4px;
+    }
+    .theme-btn { flex-shrink: 0; }
+    .resume-preview .resume-header { padding: 24px 20px 20px; }
+    .resume-preview .resume-body { padding: 20px 20px 28px; }
+    .resume-preview.theme-finance .resume-header { padding: 28px 24px 20px; }
+    .resume-preview.theme-classic .resume-header { padding: 28px 24px 20px; }
+}

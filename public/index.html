@@ -6,6 +6,7 @@
     <title>AI 简历优化器 - 智能简历优化工具</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📄</text></svg>">
     <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/resume-themes.css">
 </head>
 <body>
     <div class="bg-decoration"></div>
@@ -166,11 +167,18 @@
                     <button class="version-btn" data-version="1">版本二：突出项目经验</button>
                     <button class="version-btn" data-version="2">版本三：精简一页版</button>
                 </div>
-                <div class="resume-preview" id="optimized-resume"></div>
+                <div class="theme-selector" id="theme-selector">
+                    <button class="theme-btn active" data-theme="tech"><span class="theme-dot"></span>科技互联网</button>
+                    <button class="theme-btn" data-theme="finance"><span class="theme-dot"></span>金融商务</button>
+                    <button class="theme-btn" data-theme="creative"><span class="theme-dot"></span>创意设计</button>
+                    <button class="theme-btn" data-theme="medical"><span class="theme-dot"></span>医疗科研</button>
+                    <button class="theme-btn" data-theme="classic"><span class="theme-dot"></span>经典通用</button>
+                </div>
+                <div class="resume-preview theme-tech" id="optimized-resume"></div>
                 <div class="export-actions">
-                    <button class="btn btn-success btn-sm" id="btn-export-pdf">📥 导出 PDF</button>
-                    <button class="btn btn-secondary btn-sm" id="btn-export-word">📥 导出 Word</button>
-                    <button class="btn btn-ghost btn-sm" id="btn-copy-resume">📋 复制文本</button>
+                    <button class="btn btn-success btn-sm" id="btn-export-pdf">导出 PDF</button>
+                    <button class="btn btn-secondary btn-sm" id="btn-export-word">导出 Word</button>
+                    <button class="btn btn-ghost btn-sm" id="btn-copy-resume">复制文本</button>
                 </div>
             </div>
             <div class="result-panel" id="panel-original">
@@ -196,6 +204,7 @@
     <div class="toast-container" id="toast-container"></div>
 
     <script src="/js/marked.min.js"></script>
+    <script src="/js/resumeRenderer.js"></script>
     <script src="/js/app.js"></script>
 </body>
 </html>

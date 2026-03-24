@@ -141,6 +141,23 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.version-btn').forEach(btn => {
         btn.addEventListener('click', () => switchVersion(parseInt(btn.dataset.version)));
     });
+
+    // 主题切换
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const theme = btn.dataset.theme;
+            const container = document.getElementById('optimized-resume');
+            if (window.ResumeRenderer) {
+                ResumeRenderer.setTheme(theme, container);
+                // 如果有当前版本数据，重新渲染
+                if (state.results && state.results.versions && state.results.versions[state.currentVersion]) {
+                    renderVersion(state.currentVersion);
+                }
+            }
+        });
+    });
 });
 
 function handleFile(file) {
@@ -328,8 +345,16 @@ function renderVersion(index) {
     if (!state.results || !state.results.versions || !state.results.versions[index]) return;
     state.currentVersion = index;
     const content = state.results.versions[index];
-    const html = renderMarkdown(content);
-    document.getElementById('optimized-resume').innerHTML = html;
+    const container = document.getElementById('optimized-resume');
+    // 存储 markdown 以便切换主题时重新渲染
+    container.dataset.markdown = content;
+    // 使用结构化渲染引擎
+    if (window.ResumeRenderer) {
+        ResumeRenderer.render(content, ResumeRenderer.currentTheme, container);
+    } else {
+        const html = renderMarkdown(content);
+        container.innerHTML = html;
+    }
 }
 
 function renderMarkdown(text) {

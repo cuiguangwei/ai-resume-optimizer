@@ -683,50 +683,10 @@ textarea.jd-input {
     background: white;
     color: #1a1a1a;
     border-radius: var(--radius);
-    padding: 40px;
-    max-height: 600px;
+    max-height: 700px;
     overflow-y: auto;
     line-height: 1.8;
-}
-
-.resume-preview h1 {
-    font-size: 24px;
-    font-weight: 700;
-    margin-bottom: 4px;
-    color: #111;
-}
-
-.resume-preview h2 {
-    font-size: 16px;
-    font-weight: 600;
-    color: #4F46E5;
-    margin: 20px 0 10px;
-    padding-bottom: 6px;
-    border-bottom: 2px solid #E5E7EB;
-}
-
-.resume-preview h3 {
-    font-size: 15px;
-    font-weight: 600;
-    color: #111;
-    margin: 12px 0 4px;
-}
-
-.resume-preview p {
-    font-size: 14px;
-    color: #374151;
-    margin-bottom: 8px;
-}
-
-.resume-preview ul {
-    padding-left: 20px;
-    margin-bottom: 8px;
-}
-
-.resume-preview li {
-    font-size: 14px;
-    color: #374151;
-    margin-bottom: 4px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.3);
 }
 
 .original-resume {
