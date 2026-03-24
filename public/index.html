@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 简历优化器 - 智能简历优化工具</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📄</text></svg>">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="bg-decoration"></div>
+
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="navbar-inner">
+            <a class="navbar-brand" href="#">
+                <div class="logo-icon">📄</div>
+                <span>AI 简历优化器</span>
+            </a>
+            <div class="navbar-actions">
+                <button class="btn btn-ghost btn-sm" onclick="resetAll()">重新开始</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 步骤指示器 -->
+    <div class="step-indicator">
+        <div class="step-item">
+            <div class="step-circle active" id="step-circle-1">1</div>
+            <span class="step-label active" id="step-label-1">上传简历</span>
+        </div>
+        <div class="step-line" id="step-line-1"></div>
+        <div class="step-item">
+            <div class="step-circle" id="step-circle-2">2</div>
+            <span class="step-label" id="step-label-2">输入JD</span>
+        </div>
+        <div class="step-line" id="step-line-2"></div>
+        <div class="step-item">
+            <div class="step-circle" id="step-circle-3">3</div>
+            <span class="step-label" id="step-label-3">AI 优化</span>
+        </div>
+    </div>
+
+    <!-- 主容器 -->
+    <div class="main-container">
+
+        <!-- 第一步：上传简历 -->
+        <div class="page-section active" id="section-1">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon blue">📤</div>
+                    <div>
+                        <div class="card-title">上传你的简历</div>
+                        <div class="card-desc">支持 PDF、Word 或直接粘贴文本</div>
+                    </div>
+                </div>
+                <div class="upload-zone" id="upload-zone">
+                    <div class="upload-icon">📎</div>
+                    <div class="upload-text">拖拽文件到此处，或 <em>点击上传</em></div>
+                    <div class="upload-hint">支持 PDF、DOC、DOCX 格式，最大 10MB</div>
+                    <input type="file" class="upload-input" id="resume-file" accept=".pdf,.doc,.docx">
+                </div>
+                <div class="file-info" id="file-info">
+                    <span class="file-info-icon">📄</span>
+                    <div style="flex:1;min-width:0">
+                        <div class="file-info-name" id="file-name"></div>
+                        <div class="file-info-size" id="file-size"></div>
+                    </div>
+                    <button class="file-info-remove" id="btn-remove-file" title="移除">✕</button>
+                </div>
+                <div style="text-align:center;color:var(--text-muted);font-size:13px;margin:16px 0">— 或 —</div>
+                <div class="textarea-wrapper">
+                    <div class="textarea-label">
+                        <span>直接粘贴简历内容</span>
+                        <span class="char-count" id="resume-char-count">0 字</span>
+                    </div>
+                    <textarea id="resume-text" placeholder="将简历内容粘贴到此处...&#10;&#10;例如：&#10;张三 | 前端开发工程师&#10;电话：138-xxxx-xxxx | 邮箱：xxx@email.com&#10;&#10;教育背景&#10;XX大学 | 计算机科学 | 本科 | 2018-2022&#10;&#10;工作经历&#10;XX科技 | 前端开发 | 2022-至今&#10;- 负责公司核心产品的前端开发&#10;- 使用 React + TypeScript 重构项目"></textarea>
+                </div>
+                <div class="btn-group" style="justify-content:flex-end">
+                    <button class="btn btn-primary" id="btn-step1-next" disabled>下一步：输入职位描述 →</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第二步：输入JD + 配置 -->
+        <div class="page-section" id="section-2">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon green">💼</div>
+                    <div>
+                        <div class="card-title">输入目标职位描述 (JD)</div>
+                        <div class="card-desc">粘贴你想要投递的岗位的职位描述，AI 将针对性地优化简历</div>
+                    </div>
+                </div>
+                <div class="textarea-wrapper">
+                    <textarea class="jd-input" id="jd-text" placeholder="粘贴职位描述到此处...&#10;&#10;例如：&#10;【职位名称】高级前端开发工程师&#10;【岗位职责】&#10;1. 负责公司核心产品的前端架构设计和开发&#10;2. 优化前端性能，提升用户体验&#10;&#10;【任职要求】&#10;1. 3年以上前端开发经验&#10;2. 精通 React/Vue 技术栈&#10;3. 熟悉 TypeScript、Webpack 等工具"></textarea>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon cyan">⚙️</div>
+                    <div>
+                        <div class="card-title">优化配置</div>
+                        <div class="card-desc">选择你想要的优化方向（可多选）</div>
+                    </div>
+                </div>
+                <div class="config-grid">
+                    <div class="config-item selected" data-config="keyword">
+                        <div class="config-item-header">
+                            <span class="config-item-icon">🎯</span>
+                            <span class="config-item-title">关键词匹配</span>
+                        </div>
+                        <div class="config-item-desc">在简历中融入JD中的关键词和技能要求</div>
+                    </div>
+                    <div class="config-item selected" data-config="rewrite">
+                        <div class="config-item-header">
+                            <span class="config-item-icon">✍️</span>
+                            <span class="config-item-title">表述优化</span>
+                        </div>
+                        <div class="config-item-desc">用更有影响力的语言重写工作描述</div>
+                    </div>
+                    <div class="config-item selected" data-config="structure">
+                        <div class="config-item-header">
+                            <span class="config-item-icon">📐</span>
+                            <span class="config-item-title">结构调整</span>
+                        </div>
+                        <div class="config-item-desc">优化简历结构，突出与目标岗位最相关的内容</div>
+                    </div>
+                    <div class="config-item" data-config="quantify">
+                        <div class="config-item-header">
+                            <span class="config-item-icon">📊</span>
+                            <span class="config-item-title">数据量化</span>
+                        </div>
+                        <div class="config-item-desc">添加或建议可量化的成果数据</div>
+                    </div>
+                </div>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-secondary" id="btn-step2-back">← 返回</button>
+                <button class="btn btn-primary btn-block" id="btn-optimize">🚀 开始 AI 优化</button>
+            </div>
+        </div>
+
+        <!-- 第三步：优化结果 -->
+        <div class="page-section" id="section-3">
+            <div class="score-card">
+                <div class="score-number" id="score-number">--</div>
+                <div class="score-label">简历与岗位匹配度</div>
+            </div>
+            <div class="result-tabs">
+                <button class="result-tab active" data-tab="suggestions">📋 优化建议</button>
+                <button class="result-tab" data-tab="optimized">✨ 优化后简历</button>
+                <button class="result-tab" data-tab="original">📄 原始简历</button>
+            </div>
+            <div class="result-panel active" id="panel-suggestions">
+                <div class="card" style="margin-bottom:16px">
+                    <div class="suggestion-list" id="suggestion-list"></div>
+                </div>
+                <div class="btn-group" style="justify-content:center">
+                    <button class="btn btn-primary" id="btn-view-optimized">查看优化后简历 →</button>
+                </div>
+            </div>
+            <div class="result-panel" id="panel-optimized">
+                <div class="version-selector" id="version-selector">
+                    <button class="version-btn active" data-version="0">版本一：突出技能匹配</button>
+                    <button class="version-btn" data-version="1">版本二：突出项目经验</button>
+                    <button class="version-btn" data-version="2">版本三：精简一页版</button>
+                </div>
+                <div class="resume-preview" id="optimized-resume"></div>
+                <div class="export-actions">
+                    <button class="btn btn-success btn-sm" id="btn-export-pdf">📥 导出 PDF</button>
+                    <button class="btn btn-secondary btn-sm" id="btn-export-word">📥 导出 Word</button>
+                    <button class="btn btn-ghost btn-sm" id="btn-copy-resume">📋 复制文本</button>
+                </div>
+            </div>
+            <div class="result-panel" id="panel-original">
+                <div class="original-resume" id="original-resume"></div>
+            </div>
+            <div class="btn-group" style="margin-top:32px">
+                <button class="btn btn-secondary" id="btn-step3-back">← 修改JD重新优化</button>
+                <button class="btn btn-primary btn-block" id="btn-restart">🔄 优化新简历</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载遮罩 -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text" id="loading-text">AI 正在分析你的简历...</div>
+            <div class="loading-sub" id="loading-sub">预计需要 30-60 秒</div>
+        </div>
+    </div>
+
+    <!-- Toast 容器 -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="/js/marked.min.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>
