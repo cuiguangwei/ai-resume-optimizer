@@ -32,11 +32,13 @@ async function callLLM(prompt, maxTokens = 4000) {
             body: JSON.stringify({
                 model: MODEL,
                 messages: [
-                    { role: 'system', content: '你是一位专业的简历优化专家，擅长根据目标职位要求优化简历，帮助求职者提高简历匹配度。请简洁高效地完成任务。' },
+                    { role: 'system', content: '你是一位专业的简历优化专家，擅长根据目标职位要求优化简历，帮助求职者提高简历匹配度。请简洁高效地完成任务。注意：绝对不要重复输出相同的内容。' },
                     { role: 'user', content: prompt }
                 ],
                 max_tokens: maxTokens,
-                temperature: 0.7
+                temperature: 0.7,
+                frequency_penalty: 1.2,
+                presence_penalty: 0.6
             }),
             signal: controller.signal
         });
@@ -49,7 +51,12 @@ async function callLLM(prompt, maxTokens = 4000) {
         }
 
         const data = await response.json();
-        return data.choices[0].message.content;
+        let content = data.choices[0].message.content;
+        
+        // 清洗重复内容（DeepSeek 有时会出现"复读机"现象）
+        content = cleanRepeatedContent(content);
+        
+        return content;
     } catch (error) {
         clearTimeout(timeoutId);
         if (error.name === 'AbortError') {
@@ -57,6 +64,40 @@ async function callLLM(prompt, maxTokens = 4000) {
         }
         throw error;
     }
+}
+
+/**
+ * 清洗 AI 输出中的重复内容
+ * 检测并移除连续重复的行或段落
+ */
+function cleanRepeatedContent(text) {
+    if (!text) return text;
+    
+    const lines = text.split('\n');
+    const cleaned = [];
+    let repeatCount = 0;
+    
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        const prevLine = cleaned.length > 0 ? cleaned[cleaned.length - 1].trim() : '';
+        
+        // 如果当前行和上一行完全相同且不是空行，且不是常见的列表分隔
+        if (line === prevLine && line.length > 10) {
+            repeatCount++;
+            // 允许最多1次重复（比如表格分隔线），超过就跳过
+            if (repeatCount > 1) continue;
+        } else {
+            repeatCount = 0;
+        }
+        
+        cleaned.push(lines[i]);
+    }
+    
+    // 检测长字符串重复模式（如 abc123abc123abc123...）
+    let result = cleaned.join('\n');
+    result = result.replace(/(.{20,}?)\1{3,}/g, '$1');
+    
+    return result;
 }
 
 /**
@@ -212,17 +253,37 @@ ${jd}
 原始简历：
 ${resume}
 
-请直接输出优化后的简历内容，使用 Markdown 格式：
-- 用 # 表示姓名和联系方式
-- 用 ## 表示各板块标题（如：教育背景、工作经历、项目经验、专业技能等）
-- 用 ### 表示公司/学校名称
-- 用 - 表示列表项
-- 适当使用 **加粗** 强调重点
+【输出格式要求 - 必须严格遵守】
+请使用标准 Markdown 格式输出优化后的完整简历，格式如下：
 
-注意：
-1. 保持真实性，不要编造虚假经历
-2. 优化表述方式，使其更有影响力
-3. 确保关键词与JD匹配`;
+# 姓名 | 目标职位
+电话：xxx | 邮箱：xxx | 其他联系方式
+
+## 教育背景
+### 学校名称 | 学历/专业 | 起止时间
+- 相关描述
+
+## 工作经历
+### 公司名称 | 职位 | 起止时间
+- 工作描述1
+- 工作描述2
+
+## 项目经验
+### 项目名称
+- 项目描述
+
+## 专业技能
+- 技能1、技能2、技能3
+
+格式规则：
+1. 必须用 # 开头写姓名（一级标题）
+2. 必须用 ## 开头写各板块标题（二级标题）
+3. 必须用 ### 开头写公司/学校/项目名称（三级标题）
+4. 必须用 - 开头写列表项
+5. 用 **加粗** 强调重点
+6. 不要用代码块，不要用表格
+7. 保持真实性，不要编造虚假经历
+8. 直接输出简历内容，不要有多余的说明文字`;
 
     try {
         const optimized = await callLLM(prompt, 3000);

@@ -689,6 +689,325 @@ textarea.jd-input {
     box-shadow: 0 4px 24px rgba(0,0,0,0.3);
 }
 
+/* ============ 结构化简历渲染基础样式 ============ */
+.resume-inner {
+    padding: 40px 48px;
+    font-family: 'PingFang SC', 'Microsoft YaHei', -apple-system, sans-serif;
+}
+
+.resume-header {
+    text-align: center;
+    padding-bottom: 20px;
+    margin-bottom: 24px;
+    border-bottom: 2px solid #e5e5e5;
+}
+
+.resume-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0 0 8px 0;
+    color: #1a1a1a;
+    letter-spacing: 2px;
+}
+
+.resume-header .contact-info {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    font-size: 13px;
+    color: #666;
+}
+
+.resume-header .contact-info span::before {
+    content: '';
+}
+
+.resume-body {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.resume-section {
+    margin-bottom: 4px;
+}
+
+.resume-section .section-title {
+    font-size: 16px;
+    font-weight: 700;
+    padding: 6px 0;
+    margin-bottom: 12px;
+    border-bottom: 2px solid #333;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #1a1a1a;
+}
+
+.resume-section p {
+    font-size: 14px;
+    line-height: 1.7;
+    color: #333;
+    margin: 4px 0;
+}
+
+.resume-section ul {
+    list-style: none;
+    padding: 0;
+    margin: 4px 0;
+}
+
+.resume-section ul li {
+    font-size: 14px;
+    line-height: 1.7;
+    color: #333;
+    padding: 2px 0 2px 16px;
+    position: relative;
+}
+
+.resume-section ul li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 10px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #666;
+}
+
+.experience-item {
+    margin-bottom: 14px;
+}
+
+.exp-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 2px;
+}
+
+.exp-company {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.exp-date {
+    font-size: 13px;
+    color: #888;
+    white-space: nowrap;
+}
+
+.exp-role {
+    font-size: 14px;
+    color: #555;
+    font-style: italic;
+    margin-bottom: 4px;
+}
+
+.skill-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 8px 0;
+}
+
+.skill-tag {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    background: #f0f0f0;
+    color: #333;
+    border: 1px solid #ddd;
+}
+
+/* ============ 主题：科技互联网 ============ */
+.theme-tech .resume-header {
+    border-bottom-color: #6366F1;
+}
+.theme-tech .resume-header h1 {
+    color: #312E81;
+}
+.theme-tech .section-title {
+    color: #4F46E5;
+    border-bottom-color: #6366F1;
+}
+.theme-tech .exp-company {
+    color: #312E81;
+}
+.theme-tech .skill-tag {
+    background: #EEF2FF;
+    color: #4338CA;
+    border-color: #C7D2FE;
+}
+.theme-tech ul li::before {
+    background: #6366F1;
+}
+
+/* ============ 主题：金融商务 ============ */
+.theme-finance .resume-header {
+    border-bottom-color: #B8860B;
+}
+.theme-finance .resume-header h1 {
+    color: #1a1a1a;
+    font-family: 'Georgia', 'Times New Roman', serif;
+}
+.theme-finance .section-title {
+    color: #8B6914;
+    border-bottom-color: #B8860B;
+    font-family: 'Georgia', 'Times New Roman', serif;
+}
+.theme-finance .exp-company {
+    color: #1a1a1a;
+}
+.theme-finance .skill-tag {
+    background: #FFF8E1;
+    color: #8B6914;
+    border-color: #D4A84A;
+    border-radius: 4px;
+}
+.theme-finance ul li::before {
+    background: #B8860B;
+    border-radius: 0;
+    width: 6px;
+    height: 2px;
+    top: 12px;
+}
+
+/* ============ 主题：创意设计 ============ */
+.theme-creative .resume-header {
+    border-bottom: 3px dashed #EC4899;
+}
+.theme-creative .resume-header h1 {
+    color: #9D174D;
+    font-size: 30px;
+}
+.theme-creative .section-title {
+    color: #BE185D;
+    border-bottom: 2px dashed #F472B6;
+    font-style: italic;
+}
+.theme-creative .exp-company {
+    color: #831843;
+}
+.theme-creative .skill-tag {
+    background: linear-gradient(135deg, #FDF2F8, #FCE7F3);
+    color: #9D174D;
+    border-color: #F9A8D4;
+    border-radius: 12px;
+}
+.theme-creative ul li::before {
+    background: #EC4899;
+    border-radius: 0;
+    width: 0;
+    height: 0;
+    border-left: 4px solid #EC4899;
+    border-top: 3px solid transparent;
+    border-bottom: 3px solid transparent;
+    top: 10px;
+}
+
+/* ============ 主题：医疗科研 ============ */
+.theme-medical .resume-header {
+    border-bottom-color: #059669;
+}
+.theme-medical .resume-header h1 {
+    color: #064E3B;
+}
+.theme-medical .section-title {
+    color: #047857;
+    border-bottom-color: #059669;
+}
+.theme-medical .exp-company {
+    color: #064E3B;
+}
+.theme-medical .skill-tag {
+    background: #ECFDF5;
+    color: #047857;
+    border-color: #A7F3D0;
+}
+.theme-medical ul li::before {
+    background: #10B981;
+}
+
+/* ============ 主题：经典通用 ============ */
+.theme-classic .resume-header {
+    border-bottom: 1px solid #999;
+}
+.theme-classic .resume-header h1 {
+    color: #111;
+    font-family: 'Georgia', 'SimSun', serif;
+    letter-spacing: 4px;
+}
+.theme-classic .section-title {
+    color: #333;
+    border-bottom: 1px solid #999;
+    font-family: 'Georgia', 'SimSun', serif;
+    text-transform: none;
+    letter-spacing: 2px;
+}
+.theme-classic .exp-company {
+    color: #111;
+}
+.theme-classic .skill-tag {
+    background: #F5F5F5;
+    color: #333;
+    border-color: #CCC;
+    border-radius: 2px;
+}
+.theme-classic ul li::before {
+    background: #333;
+}
+
+/* ============ 主题选择器样式 ============ */
+.theme-selector {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.theme-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.theme-btn .theme-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.theme-btn[data-theme="tech"] .theme-dot { background: #6366F1; }
+.theme-btn[data-theme="finance"] .theme-dot { background: #B8860B; }
+.theme-btn[data-theme="creative"] .theme-dot { background: #EC4899; }
+.theme-btn[data-theme="medical"] .theme-dot { background: #10B981; }
+.theme-btn[data-theme="classic"] .theme-dot { background: #666; }
+
+.theme-btn.active {
+    background: var(--bg-hover);
+    border-color: var(--primary-light);
+    color: var(--text-primary);
+}
+
+.theme-btn:hover:not(.active) {
+    border-color: var(--primary-light);
+    color: var(--text-primary);
+}
+
 .original-resume {
     background: var(--bg-primary);
     border: 1px solid var(--border);
@@ -790,6 +1109,16 @@ textarea.jd-input {
     .step-line { width: 40px; margin: 0 8px; }
     .upload-zone { padding: 32px 16px; }
     .resume-preview { padding: 24px; }
+    .resume-inner { padding: 24px 20px; }
+    .resume-header h1 { font-size: 22px; }
+    .resume-header .contact-info { font-size: 12px; gap: 4px 12px; }
+    .exp-header { flex-direction: column; gap: 2px; }
+    .skill-tags { gap: 6px; }
+    .skill-tag { padding: 3px 10px; font-size: 12px; }
+    .theme-selector { gap: 6px; }
+    .theme-btn { padding: 5px 10px; font-size: 11px; }
+    .version-selector { gap: 6px; }
+    .version-btn { padding: 6px 12px; font-size: 12px; }
     .btn-group { flex-direction: column; }
     .btn-group .btn { width: 100%; }
 }

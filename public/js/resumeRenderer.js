@@ -261,7 +261,10 @@ const ResumeRenderer = {
      */
     render(markdown, theme, container) {
         theme = theme || this.currentTheme;
-        const data = this.parseResume(markdown);
+        
+        // 预处理：尝试修复不标准的 Markdown
+        const processed = this.preprocessMarkdown(markdown);
+        const data = this.parseResume(processed);
 
         // 如果解析到了姓名和至少一个板块，用结构化渲染
         if (data.name && data.sections.length > 0) {
@@ -269,14 +272,93 @@ const ResumeRenderer = {
         } else {
             // 回退到简单 Markdown 渲染
             if (typeof marked !== 'undefined') {
-                container.innerHTML = marked.parse(markdown);
+                container.innerHTML = marked.parse(processed);
             } else {
-                container.innerHTML = '<div style="padding:40px;line-height:1.8;white-space:pre-wrap;">' + this.escapeHtml(markdown) + '</div>';
+                container.innerHTML = '<div style="padding:40px;line-height:1.8;white-space:pre-wrap;">' + this.escapeHtml(processed) + '</div>';
             }
         }
 
         // 应用主题 class
         container.className = 'resume-preview theme-' + theme;
+    },
+
+    /**
+     * 预处理非标准 Markdown，尝试转换为标准格式
+     */
+    preprocessMarkdown(text) {
+        if (!text) return text;
+        
+        let lines = text.split('\n');
+        let result = [];
+        let hasH1 = false;
+        let hasH2 = false;
+        
+        // 检查是否已经是标准 Markdown
+        for (const line of lines) {
+            if (line.trim().startsWith('# ') && !line.trim().startsWith('## ')) hasH1 = true;
+            if (line.trim().startsWith('## ')) hasH2 = true;
+        }
+        
+        // 如果已经有标准的标题格式，直接返回
+        if (hasH1 && hasH2) return text;
+        
+        // 尝试智能识别并添加 Markdown 标记
+        const sectionKeywords = [
+            '教育背景', '教育经历', '学历', '教育',
+            '工作经历', '工作经验', '职业经历', '实习经历',
+            '项目经验', '项目经历', '项目',
+            '专业技能', '技能特长', '技术能力', '技能', '技术栈',
+            '个人信息', '基本信息', '联系方式',
+            '自我评价', '个人评价', '自我介绍', '个人总结',
+            '获奖情况', '荣誉奖项', '证书',
+            '求职意向', '目标职位'
+        ];
+        
+        let isFirstLine = true;
+        let foundName = false;
+        
+        for (let i = 0; i < lines.length; i++) {
+            let line = lines[i];
+            const trimmed = line.trim();
+            
+            if (!trimmed) {
+                result.push(line);
+                continue;
+            }
+            
+            // 已经有 # 标记的直接保留
+            if (trimmed.startsWith('#')) {
+                result.push(line);
+                if (trimmed.startsWith('# ') && !trimmed.startsWith('## ')) foundName = true;
+                continue;
+            }
+            
+            // 识别板块标题
+            const isSectionTitle = sectionKeywords.some(kw => {
+                const clean = trimmed.replace(/[\*\#\-\=\:：]/g, '').trim();
+                return clean === kw || clean.startsWith(kw);
+            });
+            
+            if (isSectionTitle) {
+                const cleanTitle = trimmed.replace(/^[\*\#\-\=]+\s*/, '').replace(/[\*\#\-\=]+\s*$/, '').replace(/[:：]\s*$/, '').trim();
+                result.push(`## ${cleanTitle}`);
+                continue;
+            }
+            
+            // 第一个看起来像名字的短行（2-5个字，不含特殊符号）
+            if (!foundName && !hasH1 && trimmed.length <= 20 && i < 5) {
+                const mightBeName = /^[\u4e00-\u9fa5a-zA-Z\s]{2,10}$/.test(trimmed.replace(/\*\*/g, ''));
+                if (mightBeName && !trimmed.includes('：') && !trimmed.includes(':')) {
+                    result.push(`# ${trimmed}`);
+                    foundName = true;
+                    continue;
+                }
+            }
+            
+            result.push(line);
+        }
+        
+        return result.join('\n');
     },
 
     /**
