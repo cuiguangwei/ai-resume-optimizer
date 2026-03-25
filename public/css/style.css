@@ -962,6 +962,57 @@ textarea.jd-input {
     background: #333;
 }
 
+/* ============ 回退渲染样式（Markdown 直接渲染时） ============ */
+.resume-fallback {
+    font-size: 14px;
+    line-height: 1.8;
+}
+.resume-fallback h1 {
+    font-size: 26px;
+    font-weight: 700;
+    text-align: center;
+    margin: 0 0 8px 0;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e5e5e5;
+    letter-spacing: 2px;
+}
+.resume-fallback h2 {
+    font-size: 16px;
+    font-weight: 700;
+    padding: 6px 0;
+    margin: 20px 0 10px 0;
+    border-bottom: 2px solid #333;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.resume-fallback h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 12px 0 4px 0;
+}
+.resume-fallback ul {
+    list-style: none;
+    padding: 0;
+    margin: 4px 0;
+}
+.resume-fallback ul li {
+    padding: 2px 0 2px 16px;
+    position: relative;
+}
+.resume-fallback ul li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 10px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #666;
+}
+.resume-fallback p {
+    margin: 4px 0;
+}
+
 /* ============ 主题选择器样式 ============ */
 .theme-selector {
     display: flex;
