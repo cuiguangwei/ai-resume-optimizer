@@ -19,6 +19,10 @@
                 <span>AI 简历优化器</span>
             </a>
             <div class="navbar-actions">
+                <div id="auth-area">
+                    <button class="btn btn-ghost btn-sm" onclick="Auth.showLoginModal()">登录</button>
+                    <button class="btn btn-primary btn-sm" onclick="Auth.showRegisterModal()">注册</button>
+                </div>
                 <button class="btn btn-ghost btn-sm" onclick="resetAll()">重新开始</button>
             </div>
         </div>
@@ -205,6 +209,7 @@
 
     <script src="/js/marked.min.js"></script>
     <script src="/js/resumeRenderer.js"></script>
+    <script src="/js/auth.js"></script>
     <script src="/js/app.js"></script>
 </body>
 </html>

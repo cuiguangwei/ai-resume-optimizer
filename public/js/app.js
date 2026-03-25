@@ -240,6 +240,12 @@ function toggleConfig(el) {
 
 // ============ 开始优化 ============
 async function startOptimize() {
+    // 检查登录状态
+    if (!Auth.isLoggedIn()) {
+        Auth.showLoginModal();
+        return;
+    }
+
     state.jdText = document.getElementById('jd-text').value.trim();
     if (!state.jdText) {
         showToast('请输入职位描述', 'error');
@@ -272,7 +278,7 @@ async function startOptimize() {
     const timeoutId = setTimeout(() => controller.abort(), 180000);
 
     try {
-        const res = await fetch('/api/optimize', {
+        const res = await Auth.fetch('/api/optimize', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -393,7 +399,7 @@ async function exportPDF() {
     showToast('正在生成 PDF...', 'info');
     
     try {
-        const res = await fetch('/api/export-pdf', {
+        const res = await Auth.fetch('/api/export-pdf', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -423,7 +429,7 @@ async function exportWord() {
     showToast('正在生成 Word...', 'info');
     
     try {
-        const res = await fetch('/api/export-word', {
+        const res = await Auth.fetch('/api/export-word', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
