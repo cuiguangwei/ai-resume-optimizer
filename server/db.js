@@ -5,14 +5,16 @@
 const { Pool } = require('pg');
 
 // 支持 DATABASE_URL（Railway 自动注入）或单独配置
+// Railway / 远程 PostgreSQL 通常需要 SSL；本地开发一般不需要
+const isProduction = process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT;
+const needSSL = isProduction || process.env.DB_SSL === 'true';
+
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes('railway')
-        ? { rejectUnauthorized: false }
-        : (process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false),
+    ssl: needSSL ? { rejectUnauthorized: false } : false,
     max: 10,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
+    connectionTimeoutMillis: 10000,
 });
 
 // 连接错误处理

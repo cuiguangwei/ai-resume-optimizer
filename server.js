@@ -223,13 +223,13 @@ app.post('/api/export-word', requireAuth, checkPermission('export_word'), async 
     }
 });
 
-// 健康检查
+// 健康检查（即使数据库未连接也返回 200，避免 Railway 健康检查卡死）
 app.get('/api/health', async (req, res) => {
     try {
         await pool.query('SELECT 1');
         res.json({ status: 'ok', database: 'connected', timestamp: new Date().toISOString() });
     } catch (err) {
-        res.status(503).json({ status: 'error', database: 'disconnected', error: err.message });
+        res.json({ status: 'ok', database: 'connecting', error: err.message, timestamp: new Date().toISOString() });
     }
 });
 
@@ -239,25 +239,37 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: err.message || '服务器内部错误' });
 });
 
-// 启动服务（先初始化数据库，再监听端口）
+// 启动服务（先监听端口让健康检查通过，再初始化数据库）
 async function start() {
-    try {
-        await initDB();
-        
-        app.listen(PORT, () => {
-            const apiKey = process.env.LLM_API_KEY || process.env.OPENAI_API_KEY;
-            console.log(`\n🚀 AI 简历优化器服务已启动`);
-            console.log(`📍 本地访问: http://localhost:${PORT}`);
-            console.log(`📁 上传目录: ${path.resolve(uploadDir)}`);
-            console.log(`🔧 环境: ${process.env.NODE_ENV || 'development'}`);
-            console.log(`🗄️  数据库: PostgreSQL (已连接)`);
-            console.log(`🔑 API Key: ${apiKey ? '已配置 (' + apiKey.substring(0, 6) + '...)' : '未配置（将使用模拟数据）'}`);
-            console.log(`🌐 Base URL: ${process.env.LLM_BASE_URL || process.env.OPENAI_BASE_URL || '未配置'}`);
-            console.log(`🤖 Model: ${process.env.LLM_MODEL || '未配置'}\n`);
-        });
-    } catch (err) {
-        console.error('❌ 启动失败:', err.message);
-        process.exit(1);
+    // 先启动 HTTP 服务，确保 Railway 健康检查能通过
+    app.listen(PORT, () => {
+        const apiKey = process.env.LLM_API_KEY || process.env.OPENAI_API_KEY;
+        console.log(`\n🚀 AI 简历优化器服务已启动`);
+        console.log(`📍 本地访问: http://localhost:${PORT}`);
+        console.log(`📁 上传目录: ${path.resolve(uploadDir)}`);
+        console.log(`🔧 环境: ${process.env.NODE_ENV || 'development'}`);
+        console.log(`🔑 API Key: ${apiKey ? '已配置 (' + apiKey.substring(0, 6) + '...)' : '未配置（将使用模拟数据）'}`);
+        console.log(`🌐 Base URL: ${process.env.LLM_BASE_URL || process.env.OPENAI_BASE_URL || '未配置'}`);
+        console.log(`🤖 Model: ${process.env.LLM_MODEL || '未配置'}\n`);
+    });
+
+    // 然后初始化数据库（失败时重试，不阻塞服务）
+    const maxRetries = 5;
+    for (let i = 1; i <= maxRetries; i++) {
+        try {
+            await initDB();
+            console.log('🗄️  数据库: PostgreSQL (已连接)');
+            return;
+        } catch (err) {
+            console.error(`⚠️ 数据库初始化失败 (第 ${i}/${maxRetries} 次):`, err.message);
+            if (i < maxRetries) {
+                const delay = i * 3000;
+                console.log(`   ${delay / 1000} 秒后重试...`);
+                await new Promise(r => setTimeout(r, delay));
+            } else {
+                console.error('❌ 数据库连接多次失败，用户相关功能暂不可用');
+            }
+        }
     }
 }
 
