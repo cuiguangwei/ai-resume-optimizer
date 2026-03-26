@@ -32,13 +32,13 @@ async function callLLM(prompt, maxTokens = 4000) {
             body: JSON.stringify({
                 model: MODEL,
                 messages: [
-                    { role: 'system', content: '你是一位专业的简历优化专家。你的核心能力是根据目标职位要求优化简历内容和结构。你必须严格使用标准 Markdown 格式输出简历：# 一级标题用于姓名，## 二级标题用于板块（如工作经历、教育背景），### 三级标题用于公司/学校/项目名称，- 用于列表项。绝对不要重复输出相同的内容，不要输出说明性文字。' },
+                    { role: 'system', content: '你是一位专业的简历优化专家。你的核心能力是根据目标职位要求优化简历内容和结构。你必须严格使用标准 Markdown 格式输出简历：# 一级标题用于姓名，## 二级标题用于板块（如工作经历、教育背景），### 三级标题用于公司/学校/项目名称，- 用于列表项。绝对不要重复输出相同的内容，不要输出说明性文字。禁止输出任何乱码、哈希值、随机字符串、Base64 编码或其他无意义字符，每一行必须是有意义的中文或英文内容。' },
                     { role: 'user', content: prompt }
                 ],
                 max_tokens: maxTokens,
-                temperature: 0.7,
-                frequency_penalty: 1.2,
-                presence_penalty: 0.6
+                temperature: 0.5,
+                frequency_penalty: 1.5,
+                presence_penalty: 0.8
             }),
             signal: controller.signal
         });
@@ -68,7 +68,7 @@ async function callLLM(prompt, maxTokens = 4000) {
 
 /**
  * 清洗 AI 输出中的重复内容
- * 检测并移除连续重复的行或段落
+ * 检测并移除连续重复的行、乱码字符串、哈希值等
  */
 function cleanRepeatedContent(text) {
     if (!text) return text;
@@ -81,11 +81,25 @@ function cleanRepeatedContent(text) {
         const line = lines[i].trim();
         const prevLine = cleaned.length > 0 ? cleaned[cleaned.length - 1].trim() : '';
         
-        // 如果当前行和上一行完全相同且不是空行，且不是常见的列表分隔
+        // 跳过空行的重复检测
+        if (!line) {
+            repeatCount = 0;
+            cleaned.push(lines[i]);
+            continue;
+        }
+        
+        // 检测乱码/哈希字符串：无空格的超长字母数字混合串（30+字符）
+        const bulletContent = line.replace(/^[-*]\s+/, '').replace(/^\d+\.\s+/, '').trim();
+        if (isGarbageLine(bulletContent)) {
+            console.warn('[cleanRepeatedContent] 跳过乱码行:', line.substring(0, 60));
+            continue;
+        }
+        
+        // 如果当前行和上一行完全相同且不是空行 → 直接跳过（不允许任何重复）
         if (line === prevLine && line.length > 10) {
             repeatCount++;
-            // 允许最多1次重复（比如表格分隔线），超过就跳过
-            if (repeatCount > 1) continue;
+            console.warn(`[cleanRepeatedContent] 跳过重复行(第${repeatCount}次):`, line.substring(0, 60));
+            continue;
         } else {
             repeatCount = 0;
         }
@@ -95,9 +109,70 @@ function cleanRepeatedContent(text) {
     
     // 检测长字符串重复模式（如 abc123abc123abc123...）
     let result = cleaned.join('\n');
-    result = result.replace(/(.{20,}?)\1{3,}/g, '$1');
+    result = result.replace(/(.{20,}?)\1{2,}/g, '$1');
+    
+    // 再做一次批量去重：如果有 3 行以上内容相同（非相邻），也只保留第一次
+    result = deduplicateLines(result);
     
     return result;
+}
+
+/**
+ * 检测一行文字是否是乱码/哈希/无意义字符串
+ */
+function isGarbageLine(text) {
+    if (!text || text.length < 15) return false;
+    
+    // 去掉 Markdown 格式标记
+    const clean = text.replace(/\*\*/g, '').replace(/\*/g, '').trim();
+    if (!clean) return false;
+    
+    // 模式1：纯字母数字+特殊符号的长串（没有空格、没有中文），像哈希/token
+    // 例如 c6d7dcfc556664b91HZ7ot6_EFtSwYy6VfqXWOKnmfPWNRc~
+    if (/^[a-zA-Z0-9_\-~.+=\/]{20,}$/.test(clean)) {
+        return true;
+    }
+    
+    // 模式2：大段无空格的字母数字混合（中间可能有少量符号），且不含中文
+    if (clean.length > 25 && !/[\u4e00-\u9fa5]/.test(clean) && !/\s/.test(clean)) {
+        // 但排除合理的英文技术词（如 URL、email、GitHub 链接等）
+        if (!/^https?:\/\//.test(clean) && !clean.includes('@') && !clean.includes('.com')) {
+            return true;
+        }
+    }
+    
+    // 模式3：高比例的非常用字符（> 50%是数字或不可读字符）
+    const totalLen = clean.length;
+    const readableChars = (clean.match(/[\u4e00-\u9fa5a-zA-Z\s,，。.、：:；;！!？?（()）\-\—\[\]【】""'']/g) || []).length;
+    if (totalLen > 20 && readableChars / totalLen < 0.3) {
+        return true;
+    }
+    
+    return false;
+}
+
+/**
+ * 批量去重：如果同一内容出现 3 次以上（非空行），只保留前 2 次
+ */
+function deduplicateLines(text) {
+    const lines = text.split('\n');
+    const lineCount = {};
+    const result = [];
+    
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.length <= 10 || trimmed.startsWith('#')) {
+            result.push(line);
+            continue;
+        }
+        
+        lineCount[trimmed] = (lineCount[trimmed] || 0) + 1;
+        if (lineCount[trimmed] <= 2) {
+            result.push(line);
+        }
+    }
+    
+    return result.join('\n');
 }
 
 /**
@@ -221,11 +296,16 @@ async function generateVersions(resume, jd, configs) {
         generateVersion(resume, jd, 'concise')
     ]);
     
+    // 日志：打印各版本长度和差异
+    console.log('[generateVersions] 版本1长度:', version1?.length, '版本2长度:', version2?.length, '版本3长度:', version3?.length);
+    if (version1 === version2) console.warn('[generateVersions] 警告: 版本1和版本2内容相同！');
+    if (version1 === version3) console.warn('[generateVersions] 警告: 版本1和版本3内容相同！');
+    
     return [version1, version2, version3];
 }
 
 /**
- * 生成单个版本的优化简历
+ * 生成单个版本的优化简历（带质量检测和重试）
  */
 async function generateVersion(resume, jd, style) {
     const stylePrompts = {
@@ -235,7 +315,8 @@ async function generateVersion(resume, jd, style) {
 2. 技能列表按照与JD的匹配度从高到低排列
 3. 在每段工作经历的描述中，重点突出使用了哪些与JD相关的技术和技能
 4. 用量化数据（百分比、数字）展示技能应用的成果
-5. 为技能添加熟练度标注（如：精通、熟练、熟悉）`,
+5. 为技能添加熟练度标注（如：精通、熟练、熟悉）
+6. 板块顺序必须是：基本信息 → 求职意向 → 教育背景 → 专业技能 → 工作经历 → 项目经验 → 自我评价`,
         
         project: `【版本二：突出项目经验】
 你的任务是以"项目经验"为核心重新组织简历。具体要求：
@@ -244,7 +325,8 @@ async function generateVersion(resume, jd, style) {
 3. 为每个项目标注技术栈和个人角色
 4. 重点展示与目标岗位最相关的 2-3 个项目，充分展开描述
 5. 其他项目可以简要提及
-6. 工作经历部分相应精简，突出与项目相关的职责`,
+6. 工作经历部分相应精简，突出与项目相关的职责
+7. 板块顺序必须是：基本信息 → 求职意向 → 教育背景 → 项目经验 → 工作经历 → 专业技能 → 自我评价`,
         
         concise: `【版本三：精简一页版】
 你的任务是将简历精简为一页纸的精华版。具体要求：
@@ -253,7 +335,8 @@ async function generateVersion(resume, jd, style) {
 3. 每段工作经历最多 3 个要点，每个要点不超过 2 行
 4. 删除与目标岗位无关的经历、项目和技能
 5. 合并同类技能，用简洁的标签式列举
-6. 自我评价精简为 1-2 句话的核心亮点`
+6. 自我评价精简为 1-2 句话的核心亮点
+7. 板块顺序必须是：基本信息 → 专业技能（标签式简列）→ 工作经历（精简）→ 教育背景`
     };
 
     const prompt = `你是一位资深简历优化专家。请根据以下职位描述，优化这份简历。
@@ -309,16 +392,81 @@ ${resume}
 4. 列表项必须用 - 开头
 5. 禁止使用代码块、表格、HTML标签
 6. 保持真实性，不编造虚假经历
-7. 直接输出简历正文，前后不要有任何说明文字、分析或总结`;
+7. 直接输出简历正文，前后不要有任何说明文字、分析或总结
+8. 禁止输出乱码、哈希值、随机字符串
+9. 每一行内容都必须是有意义的中文或英文文字`;
 
-    try {
-        const optimized = await callLLM(prompt, 3000);
-        // 二次清理：去掉 AI 可能加的前后说明文字
-        return cleanAIOutput(optimized);
-    } catch (error) {
-        console.error(`生成${style}版本失败:`, error);
-        return resume;
+    // 最多重试 2 次
+    const MAX_RETRIES = 2;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+            const optimized = await callLLM(prompt, 3000);
+            const cleaned = cleanAIOutput(optimized);
+            
+            // 质量检测：检查输出是否包含大量乱码
+            if (isOutputGarbled(cleaned)) {
+                console.warn(`[generateVersion] ${style} 版本第${attempt + 1}次生成检测到乱码，${attempt < MAX_RETRIES ? '重试中...' : '使用原始简历'}`);
+                if (attempt < MAX_RETRIES) continue;
+                return resume; // 重试耗尽，返回原始简历
+            }
+            
+            return cleaned;
+        } catch (error) {
+            console.error(`生成${style}版本失败(第${attempt + 1}次):`, error);
+            if (attempt >= MAX_RETRIES) return resume;
+        }
     }
+    return resume;
+}
+
+/**
+ * 检测 AI 输出是否包含大量乱码/无意义内容
+ */
+function isOutputGarbled(text) {
+    if (!text) return true;
+    
+    const lines = text.split('\n').filter(l => l.trim());
+    if (lines.length < 3) return true; // 内容太少
+    
+    let garbageCount = 0;
+    let totalContentLines = 0;
+    
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+        
+        totalContentLines++;
+        const bulletContent = trimmed.replace(/^[-*]\s+/, '').replace(/^\d+\.\s+/, '').trim();
+        
+        // 检测乱码行
+        if (isGarbageLine(bulletContent)) {
+            garbageCount++;
+        }
+    }
+    
+    // 如果 >20% 的内容行是乱码，判定为整体质量差
+    if (totalContentLines > 0 && garbageCount / totalContentLines > 0.2) {
+        return true;
+    }
+    
+    // 检查是否有大量连续重复行
+    let maxRepeat = 0;
+    let currentRepeat = 0;
+    let prevLine = '';
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed === prevLine && trimmed.length > 10) {
+            currentRepeat++;
+            maxRepeat = Math.max(maxRepeat, currentRepeat);
+        } else {
+            currentRepeat = 0;
+        }
+        prevLine = trimmed;
+    }
+    
+    if (maxRepeat >= 3) return true; // 同一行重复 4 次以上
+    
+    return false;
 }
 
 /**

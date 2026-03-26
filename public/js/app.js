@@ -298,6 +298,24 @@ async function startOptimize() {
         }
 
         state.results = await res.json();
+        
+        // 调试：打印各版本的内容长度和差异
+        if (state.results.versions) {
+            console.log('[优化结果] 共', state.results.versions.length, '个版本');
+            state.results.versions.forEach((v, i) => {
+                console.log(`  版本${i+1}: ${v ? v.length : 0}字, 前80字: ${v ? v.substring(0, 80) : '(空)'}`);
+            });
+            // 检查版本间是否相同
+            if (state.results.versions.length >= 2) {
+                const v0 = state.results.versions[0];
+                const v1 = state.results.versions[1];
+                const v2 = state.results.versions[2];
+                if (v0 === v1) console.warn('[警告] 版本1和版本2内容完全相同！');
+                if (v0 === v2) console.warn('[警告] 版本1和版本3内容完全相同！');
+                if (v1 === v2) console.warn('[警告] 版本2和版本3内容完全相同！');
+            }
+        }
+        
         hideLoading();
         renderResults();
         goToStep(3);
@@ -350,7 +368,11 @@ function renderResults() {
 function renderVersion(index) {
     if (!state.results || !state.results.versions || !state.results.versions[index]) return;
     state.currentVersion = index;
-    const content = state.results.versions[index];
+    let content = state.results.versions[index];
+    
+    // 前端防御：过滤乱码/哈希行
+    content = cleanGarbageLines(content);
+    
     const container = document.getElementById('optimized-resume');
     // 存储 markdown 以便切换主题时重新渲染
     container.dataset.markdown = content;
@@ -361,6 +383,57 @@ function renderVersion(index) {
         const html = renderMarkdown(content);
         container.innerHTML = html;
     }
+    
+    // 调试：打印各版本内容长度
+    console.log(`[版本切换] 当前版本: ${index}, 内容长度: ${content.length}, 前100字: ${content.substring(0, 100)}`);
+}
+
+/**
+ * 前端防御：过滤乱码/哈希/无意义字符串
+ */
+function cleanGarbageLines(text) {
+    if (!text) return text;
+    const lines = text.split('\n');
+    const cleaned = [];
+    let prevTrimmed = '';
+    
+    for (const line of lines) {
+        const trimmed = line.trim();
+        
+        // 跳过空行直接保留
+        if (!trimmed) {
+            cleaned.push(line);
+            prevTrimmed = '';
+            continue;
+        }
+        
+        // 去掉列表标记后检测内容
+        const bulletContent = trimmed.replace(/^[-*]\s+/, '').replace(/^\d+\.\s+/, '').trim();
+        
+        // 检测乱码：无空格的超长字母数字混合串
+        if (bulletContent.length >= 20 && /^[a-zA-Z0-9_\-~.+=\/]{20,}$/.test(bulletContent)) {
+            console.warn('[前端过滤] 跳过乱码行:', trimmed.substring(0, 60));
+            continue;
+        }
+        
+        // 检测无中文、无空格的长串
+        if (bulletContent.length > 25 && !/[\u4e00-\u9fa5]/.test(bulletContent) && !/\s/.test(bulletContent)) {
+            if (!/^https?:\/\//.test(bulletContent) && !bulletContent.includes('@') && !bulletContent.includes('.com')) {
+                console.warn('[前端过滤] 跳过疑似乱码行:', trimmed.substring(0, 60));
+                continue;
+            }
+        }
+        
+        // 连续完全相同的行，只保留第一次
+        if (trimmed === prevTrimmed && trimmed.length > 10) {
+            continue;
+        }
+        
+        cleaned.push(line);
+        prevTrimmed = trimmed;
+    }
+    
+    return cleaned.join('\n');
 }
 
 function renderMarkdown(text) {
