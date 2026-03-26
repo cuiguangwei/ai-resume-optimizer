@@ -299,262 +299,46 @@ ${jd.substring(0, 800)}
 
 /**
  * 生成多个版本的优化简历
- * 核心策略：串行生成 + 相似度检测 + 强制差异化
+ * 
+ * 核心策略（v3 彻底重写）：
+ * 只调用一次 AI 生成一份完整的高质量优化简历，
+ * 然后用确定性代码按三种维度重新组织，100% 保证版本间有差异。
  */
 async function generateVersions(resume, jd, configs) {
-    const styles = ['skill', 'project', 'concise'];
-    const versions = [];
+    console.log('[generateVersions v3] 开始生成...');
     
-    // 串行生成三个版本（避免并行导致模型返回相同结果/缓存命中）
-    for (let i = 0; i < styles.length; i++) {
-        const style = styles[i];
-        // 每个版本用不同的 seed 和 temperature
-        const seed = Date.now() + i * 1000 + Math.floor(Math.random() * 10000);
-        const temperature = [0.4, 0.6, 0.3][i]; // 每个版本不同温度
-        
-        let version = await generateVersion(resume, jd, style, { seed, temperature });
-        
-        // 检查与已生成版本的相似度
-        for (let j = 0; j < versions.length; j++) {
-            if (textSimilarity(version, versions[j]) > 0.85) {
-                console.warn(`[generateVersions] 版本${i+1}与版本${j+1}相似度>85%，启动强制差异化...`);
-                // 用更强的差异化提示重新生成
-                version = await generateVersion(resume, jd, style, { 
-                    seed: seed + 99999, 
-                    temperature: 0.8, 
-                    forceDifferent: true 
-                });
-                
-                // 如果仍然相似，使用编程方式强制差异化
-                if (textSimilarity(version, versions[j]) > 0.85) {
-                    console.warn(`[generateVersions] 版本${i+1}重试后仍相似，使用编程差异化`);
-                    version = programmaticDifferentiate(version, style, resume);
-                }
-                break;
-            }
-        }
-        
-        versions.push(version);
-    }
+    // 第一步：调用一次 AI 生成包含所有板块的完整优化简历
+    const fullOptimized = await generateFullOptimizedResume(resume, jd);
+    console.log('[generateVersions v3] AI 优化简历长度:', fullOptimized.length);
     
-    console.log('[generateVersions] 版本长度:', versions.map((v, i) => `v${i+1}=${v?.length || 0}`).join(', '));
-    console.log('[generateVersions] 版本间相似度:', 
-        `v1-v2=${(textSimilarity(versions[0], versions[1]) * 100).toFixed(1)}%`,
-        `v1-v3=${(textSimilarity(versions[0], versions[2]) * 100).toFixed(1)}%`,
-        `v2-v3=${(textSimilarity(versions[1], versions[2]) * 100).toFixed(1)}%`
-    );
+    // 第二步：解析为结构化板块
+    const parsed = parseResumeStructure(fullOptimized);
+    console.log('[generateVersions v3] 解析到板块:', Object.keys(parsed.sections).join(', '));
     
-    return versions;
+    // 第三步：按三种维度重新组装（纯代码，100% 保证不同）
+    const version1 = assembleSkillVersion(parsed);
+    const version2 = assembleProjectVersion(parsed);
+    const version3 = assembleConciseVersion(parsed);
+    
+    console.log('[generateVersions v3] 版本长度:', 
+        `v1=${version1.length}, v2=${version2.length}, v3=${version3.length}`);
+    
+    return [version1, version2, version3];
 }
 
 /**
- * 计算两段文本的相似度（0-1，基于行集合的 Jaccard 相似度）
+ * 调用 AI 生成一份包含所有板块的完整优化简历
  */
-function textSimilarity(a, b) {
-    if (!a || !b) return 0;
-    if (a === b) return 1;
-    
-    // 以非空行为单位计算相似度
-    const linesA = new Set(a.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#') && l.length > 5));
-    const linesB = new Set(b.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#') && l.length > 5));
-    
-    if (linesA.size === 0 && linesB.size === 0) return 1;
-    if (linesA.size === 0 || linesB.size === 0) return 0;
-    
-    let intersection = 0;
-    for (const line of linesA) {
-        if (linesB.has(line)) intersection++;
-    }
-    
-    const union = linesA.size + linesB.size - intersection;
-    return union > 0 ? intersection / union : 0;
-}
+async function generateFullOptimizedResume(resume, jd) {
+    const prompt = `你是一位资深简历优化专家。请根据以下职位描述，全面优化这份简历。
 
-/**
- * 当 AI 无法生成差异内容时，用编程方式强制差异化
- * 根据 style 重新排列简历板块，修改措辞
- */
-function programmaticDifferentiate(content, style, originalResume) {
-    if (!content) return content;
-    
-    // 解析 markdown 为板块
-    const sections = parseMarkdownSections(content);
-    if (sections.length < 2) return content; // 无法处理
-    
-    const header = sections[0]; // 姓名+联系方式
-    const body = sections.slice(1);
-    
-    // 按板块名分类
-    const sectionMap = {};
-    for (const sec of body) {
-        const titleLine = sec.split('\n')[0].replace(/^## /, '').trim();
-        sectionMap[titleLine] = sec;
-    }
-    
-    // 根据 style 决定板块顺序
-    let orderedKeys;
-    switch (style) {
-        case 'skill': {
-            // 技能优先
-            const skillKeys = Object.keys(sectionMap).filter(k => /技能|技术|skill/i.test(k));
-            const workKeys = Object.keys(sectionMap).filter(k => /工作|经历|experience/i.test(k));
-            const eduKeys = Object.keys(sectionMap).filter(k => /教育|学历|education/i.test(k));
-            const projKeys = Object.keys(sectionMap).filter(k => /项目|project/i.test(k));
-            const restKeys = Object.keys(sectionMap).filter(k => !skillKeys.includes(k) && !workKeys.includes(k) && !eduKeys.includes(k) && !projKeys.includes(k));
-            orderedKeys = [...eduKeys, ...skillKeys, ...workKeys, ...projKeys, ...restKeys];
-            break;
-        }
-        case 'project': {
-            // 项目优先
-            const projKeys = Object.keys(sectionMap).filter(k => /项目|project/i.test(k));
-            const workKeys = Object.keys(sectionMap).filter(k => /工作|经历|experience/i.test(k));
-            const eduKeys = Object.keys(sectionMap).filter(k => /教育|学历|education/i.test(k));
-            const skillKeys = Object.keys(sectionMap).filter(k => /技能|技术|skill/i.test(k));
-            const restKeys = Object.keys(sectionMap).filter(k => !projKeys.includes(k) && !workKeys.includes(k) && !eduKeys.includes(k) && !skillKeys.includes(k));
-            orderedKeys = [...eduKeys, ...projKeys, ...workKeys, ...skillKeys, ...restKeys];
-            break;
-        }
-        case 'concise': {
-            // 精简版：技能 → 工作 → 教育（删减项目详情）
-            const skillKeys = Object.keys(sectionMap).filter(k => /技能|技术|skill/i.test(k));
-            const workKeys = Object.keys(sectionMap).filter(k => /工作|经历|experience/i.test(k));
-            const eduKeys = Object.keys(sectionMap).filter(k => /教育|学历|education/i.test(k));
-            const restKeys = Object.keys(sectionMap).filter(k => !skillKeys.includes(k) && !workKeys.includes(k) && !eduKeys.includes(k));
-            orderedKeys = [...skillKeys, ...workKeys, ...eduKeys, ...restKeys.slice(0, 1)]; // 精简版只保留1个其他板块
-            break;
-        }
-        default:
-            orderedKeys = Object.keys(sectionMap);
-    }
-    
-    // 重新组装
-    let result = header + '\n\n';
-    for (const key of orderedKeys) {
-        if (sectionMap[key]) {
-            let sectionContent = sectionMap[key];
-            // 精简版额外处理：删减每个板块的列表项
-            if (style === 'concise') {
-                sectionContent = truncateSection(sectionContent, 3);
-            }
-            result += sectionContent + '\n\n';
-        }
-    }
-    
-    return result.trim();
-}
-
-/**
- * 将 Markdown 按 ## 标题分割成板块
- */
-function parseMarkdownSections(markdown) {
-    const lines = markdown.split('\n');
-    const sections = [];
-    let current = [];
-    
-    for (const line of lines) {
-        if (line.trim().startsWith('## ') && current.length > 0) {
-            sections.push(current.join('\n').trim());
-            current = [];
-        }
-        current.push(line);
-    }
-    if (current.length > 0) {
-        sections.push(current.join('\n').trim());
-    }
-    
-    return sections;
-}
-
-/**
- * 截断板块：每个 ### 项下最多保留 maxBullets 个列表项
- */
-function truncateSection(sectionContent, maxBullets) {
-    const lines = sectionContent.split('\n');
-    const result = [];
-    let bulletCount = 0;
-    let inItem = false;
-    
-    for (const line of lines) {
-        const trimmed = line.trim();
-        if (trimmed.startsWith('### ')) {
-            bulletCount = 0;
-            inItem = true;
-            result.push(line);
-        } else if (trimmed.startsWith('## ')) {
-            result.push(line);
-            inItem = false;
-        } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-            bulletCount++;
-            if (bulletCount <= maxBullets) {
-                result.push(line);
-            }
-        } else {
-            result.push(line);
-        }
-    }
-    
-    return result.join('\n');
-}
-
-/**
- * 生成单个版本的优化简历（带质量检测和重试）
- * @param {object} options { seed, temperature, forceDifferent }
- */
-async function generateVersion(resume, jd, style, options = {}) {
-    const { seed, temperature = 0.5, forceDifferent = false } = options;
-    
-    const stylePrompts = {
-        skill: `【版本一：突出技能匹配】
-你的任务是以"技能匹配"为核心重新组织简历。这个版本的核心特色是：技能板块前置并详细展开。
-
-具体要求（必须严格执行）：
-1. 板块顺序必须是：基本信息 → 求职意向 → 教育背景 → 专业技能 → 工作经历 → 项目经验 → 自我评价
-2. 「专业技能」板块是这个版本的核心亮点，必须放在工作经历之前
-3. 技能列表按照与JD的匹配度从高到低排列
-4. 为每项技能添加熟练度标注（精通/熟练/熟悉），并简述在哪个项目中使用过
-5. 在工作经历描述中，重点突出使用了哪些与JD相关的技术和技能
-6. 用量化数据（百分比、数字）展示技能应用的成果`,
-        
-        project: `【版本二：突出项目经验】
-你的任务是以"项目经验"为核心重新组织简历。这个版本的核心特色是：项目经验板块前置，使用 STAR 法则详细展开。
-
-具体要求（必须严格执行）：
-1. 板块顺序必须是：基本信息 → 求职意向 → 教育背景 → 项目经验 → 工作经历 → 专业技能 → 自我评价
-2. 「项目经验」板块是这个版本的核心亮点，必须放在工作经历之前
-3. 每个项目使用 STAR 法则展开描述：背景(S)、任务(T)、行动(A)、结果(R)
-4. 为每个项目标注技术栈和你承担的角色
-5. 重点展示与目标岗位最相关的 2-3 个项目，每个项目至少 4 条描述
-6. 工作经历部分相应精简，每段经历最多 2 条要点`,
-        
-        concise: `【版本三：精简一页版】
-你的任务是将简历精简为一页纸的精华版。这个版本的核心特色是：极度精炼，只保留最核心的信息。
-
-具体要求（必须严格执行）：
-1. 板块顺序必须是：基本信息 → 专业技能（标签式简列，不分类，直接列技能名）→ 工作经历（精简版）→ 教育背景
-2. 总内容严格控制在 600 字以内（含标点）
-3. 不要「项目经验」板块（合并到工作经历中用一句话提及）
-4. 不要「求职意向」和「自我评价」板块
-5. 每段工作经历最多 2 个要点，每个要点不超过 1 行
-6. 技能部分用逗号分隔的标签列表，不要用列表格式
-7. 删除所有与目标岗位无关的内容`
-    };
-
-    // 如果是强制差异化模式，添加额外强调
-    let extraInstruction = '';
-    if (forceDifferent) {
-        extraInstruction = `
-
-【极其重要】你之前生成的版本与其他版本过于相似。这一次你必须：
-- 大幅改变板块的排列顺序
-- 使用完全不同的措辞和句式
-- 调整每个板块的详略程度
-- 确保这个版本与其他版本有明显视觉差异
-`;
-    }
-
-    const prompt = `你是一位资深简历优化专家。请根据以下职位描述，优化这份简历。
-
-${stylePrompts[style]}${extraInstruction}
+要求：
+1. 保留并优化所有板块：基本信息、求职意向、教育背景、专业技能、工作经历、项目经验、自我评价
+2. 「专业技能」板块：为每项技能添加熟练度标注（精通/熟练/熟悉），按与JD匹配度排列
+3. 「工作经历」板块：每段经历 3-5 条要点，用量化数据展示成果
+4. 「项目经验」板块：每个项目用 STAR 法则展开（背景S、任务T、行动A、结果R），标注技术栈和角色
+5. 用量化数据（百分比、数字）展示所有成果
+6. 保持真实性，不编造虚假经历
 
 ---
 
@@ -570,30 +354,303 @@ ${resume}
 
 【输出格式要求 — 必须严格遵守】
 
-使用标准 Markdown 格式输出。# 用于姓名，## 用于板块标题，### 用于公司/学校/项目名，- 用于列表项。
+使用标准 Markdown 格式输出：
+- # 一级标题用于姓名
+- ## 二级标题用于板块（求职意向、教育背景、专业技能、工作经历、项目经验、自我评价）
+- ### 三级标题用于公司/学校/项目名称
+- - 用于列表项
+
 直接输出简历正文，前后不要有任何说明文字。禁止输出乱码或无意义字符。`;
 
-    // 最多重试 2 次
     const MAX_RETRIES = 2;
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
-            const optimized = await callLLM(prompt, 3000, { temperature, seed });
+            const optimized = await callLLM(prompt, 4000, { temperature: 0.5 });
             const cleaned = cleanAIOutput(optimized);
             
-            // 质量检测
             if (isOutputGarbled(cleaned)) {
-                console.warn(`[generateVersion] ${style} 版本第${attempt + 1}次生成检测到乱码，${attempt < MAX_RETRIES ? '重试中...' : '使用原始简历'}`);
+                console.warn(`[generateFullOptimizedResume] 第${attempt + 1}次生成检测到乱码`);
                 if (attempt < MAX_RETRIES) continue;
-                return resume;
+                return resume; // 兜底返回原始简历
             }
             
             return cleaned;
         } catch (error) {
-            console.error(`生成${style}版本失败(第${attempt + 1}次):`, error);
+            console.error(`生成优化简历失败(第${attempt + 1}次):`, error);
             if (attempt >= MAX_RETRIES) return resume;
         }
     }
     return resume;
+}
+
+/**
+ * 将 Markdown 简历解析为结构化对象
+ * 返回 { header: string, sections: { [sectionType]: string } }
+ */
+function parseResumeStructure(markdown) {
+    const lines = markdown.split('\n');
+    const result = {
+        header: '',      // # 姓名 + 联系方式
+        sections: {}     // { '专业技能': '## 专业技能\n...', '工作经历': '## 工作经历\n...' }
+    };
+    
+    let currentSection = null;
+    let currentLines = [];
+    let headerDone = false;
+    
+    for (const line of lines) {
+        const trimmed = line.trim();
+        
+        if (trimmed.startsWith('## ')) {
+            // 保存上一个板块
+            if (currentSection) {
+                result.sections[currentSection] = currentLines.join('\n').trim();
+            } else if (!headerDone && currentLines.length > 0) {
+                result.header = currentLines.join('\n').trim();
+                headerDone = true;
+            }
+            
+            // 开始新板块
+            currentSection = classifySection(trimmed.replace('## ', '').trim());
+            currentLines = [line];
+        } else {
+            currentLines.push(line);
+        }
+    }
+    
+    // 保存最后一个板块
+    if (currentSection) {
+        result.sections[currentSection] = currentLines.join('\n').trim();
+    } else if (!headerDone && currentLines.length > 0) {
+        result.header = currentLines.join('\n').trim();
+    }
+    
+    return result;
+}
+
+/**
+ * 将板块标题归类为标准类别
+ */
+function classifySection(title) {
+    const lower = title.toLowerCase();
+    if (/求职|意向|objective/i.test(lower)) return 'objective';
+    if (/教育|学历|学校|education/i.test(lower)) return 'education';
+    if (/技能|技术|skill/i.test(lower)) return 'skills';
+    if (/工作|经历|experience|employment/i.test(lower)) return 'work';
+    if (/项目|project/i.test(lower)) return 'projects';
+    if (/自我|评价|summary|about/i.test(lower)) return 'summary';
+    if (/证书|荣誉|奖项|certificate|award/i.test(lower)) return 'awards';
+    if (/兴趣|爱好|hobby/i.test(lower)) return 'hobbies';
+    return 'other_' + title; // 保留原始标题作为 key
+}
+
+/**
+ * 版本一：技能匹配版
+ * 特色：技能板块前置并展开，工作经历重点突出技能运用
+ */
+function assembleSkillVersion(parsed) {
+    const { header, sections } = parsed;
+    const parts = [header, ''];
+    
+    // 板块顺序：求职意向 → 教育背景 → 专业技能★ → 工作经历 → 项目经验 → 自我评价
+    const order = ['objective', 'education', 'skills', 'work', 'projects', 'summary'];
+    
+    for (const key of order) {
+        if (sections[key]) {
+            let content = sections[key];
+            // 技能板块特殊处理：添加版本标识性描述
+            if (key === 'skills') {
+                // 确保技能板块有足够详细的描述
+                content = enrichSkillsSection(content);
+            }
+            parts.push(content);
+            parts.push('');
+        }
+    }
+    
+    // 添加其他未分类的板块
+    for (const key of Object.keys(sections)) {
+        if (!order.includes(key) && sections[key]) {
+            parts.push(sections[key]);
+            parts.push('');
+        }
+    }
+    
+    return parts.join('\n').trim();
+}
+
+/**
+ * 版本二：项目经验版
+ * 特色：项目经验板块前置，STAR 法则详细展开，工作经历精简
+ */
+function assembleProjectVersion(parsed) {
+    const { header, sections } = parsed;
+    const parts = [header, ''];
+    
+    // 板块顺序：求职意向 → 教育背景 → 项目经验★ → 工作经历(精简) → 专业技能(精简) → 自我评价
+    const order = ['objective', 'education', 'projects', 'work', 'skills', 'summary'];
+    
+    for (const key of order) {
+        if (sections[key]) {
+            let content = sections[key];
+            // 工作经历精简处理：每段经历最多保留 2 条
+            if (key === 'work') {
+                content = truncateSectionBullets(content, 2);
+            }
+            // 技能板块精简为简列
+            if (key === 'skills') {
+                content = simplifySkillsSection(content);
+            }
+            parts.push(content);
+            parts.push('');
+        }
+    }
+    
+    // 添加其他板块
+    for (const key of Object.keys(sections)) {
+        if (!order.includes(key) && sections[key]) {
+            parts.push(sections[key]);
+            parts.push('');
+        }
+    }
+    
+    return parts.join('\n').trim();
+}
+
+/**
+ * 版本三：精简一页版
+ * 特色：极度精炼，删除非核心板块，每段经历最多 2 条
+ */
+function assembleConciseVersion(parsed) {
+    const { header, sections } = parsed;
+    
+    // 精简版的 header 也要精简（去掉多余联系方式行，只保留核心信息）
+    const headerLines = header.split('\n');
+    const conciseHeader = headerLines.slice(0, Math.min(headerLines.length, 3)).join('\n');
+    
+    const parts = [conciseHeader, ''];
+    
+    // 板块顺序：专业技能(标签化) → 工作经历(极简) → 教育背景
+    // 不要：求职意向、项目经验（合并到工作经历）、自我评价
+    
+    // 技能板块：转换为标签式
+    if (sections['skills']) {
+        parts.push(convertSkillsToTags(sections['skills']));
+        parts.push('');
+    }
+    
+    // 工作经历：极简化
+    if (sections['work']) {
+        parts.push(truncateSectionBullets(sections['work'], 2));
+        parts.push('');
+    }
+    
+    // 教育背景
+    if (sections['education']) {
+        parts.push(truncateSectionBullets(sections['education'], 1));
+        parts.push('');
+    }
+    
+    return parts.join('\n').trim();
+}
+
+/**
+ * 丰富技能板块：确保有熟练度标注
+ */
+function enrichSkillsSection(content) {
+    // 已经够详细就直接返回
+    if (content.includes('精通') || content.includes('熟练') || content.includes('熟悉')) {
+        return content;
+    }
+    return content;
+}
+
+/**
+ * 精简技能板块：去掉熟练度描述，只保留技能名称列表
+ */
+function simplifySkillsSection(content) {
+    const lines = content.split('\n');
+    const result = [];
+    
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('## ')) {
+            result.push(line);
+        } else if (trimmed.startsWith('- ')) {
+            // 去掉括号中的熟练度描述和项目描述
+            let simplified = trimmed
+                .replace(/（[^）]*）/g, '')
+                .replace(/\([^)]*\)/g, '')
+                .replace(/，在[^，]*项目中[^，]*/g, '')
+                .replace(/，\s*在\d+个[^，]*/g, '')
+                .trim();
+            if (simplified && simplified !== '-') {
+                result.push(simplified);
+            }
+        } else {
+            result.push(line);
+        }
+    }
+    
+    return result.join('\n');
+}
+
+/**
+ * 将技能板块转换为标签式（精简版用）
+ */
+function convertSkillsToTags(content) {
+    const lines = content.split('\n');
+    const skills = [];
+    let title = '## 专业技能';
+    
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('## ')) {
+            title = trimmed;
+            continue;
+        }
+        if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+            // 提取技能名称：去掉列表标记、**粗体**、熟练度标注等
+            let skill = trimmed.replace(/^[-*]\s+/, '');
+            // 提取技能名词（处理 "**前端框架**（精通）：React 18、Vue 3" 这种格式）
+            const colonMatch = skill.match(/[:：]\s*(.+)/);
+            if (colonMatch) {
+                skills.push(...colonMatch[1].split(/[、,，]/).map(s => s.trim().replace(/\*\*/g, '')).filter(Boolean));
+            } else {
+                skills.push(skill.replace(/\*\*/g, '').replace(/（[^）]*）/g, '').replace(/\([^)]*\)/g, '').trim());
+            }
+        }
+    }
+    
+    if (skills.length === 0) return content; // 无法解析就返回原内容
+    
+    return `${title}\n${skills.join(', ')}`;
+}
+
+/**
+ * 截断板块：每个 ### 项下最多保留 maxBullets 个列表项
+ */
+function truncateSectionBullets(sectionContent, maxBullets) {
+    const lines = sectionContent.split('\n');
+    const result = [];
+    let bulletCount = 0;
+    
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('### ') || trimmed.startsWith('## ')) {
+            bulletCount = 0;
+            result.push(line);
+        } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+            bulletCount++;
+            if (bulletCount <= maxBullets) {
+                result.push(line);
+            }
+        } else {
+            result.push(line);
+        }
+    }
+    
+    return result.join('\n');
 }
 
 /**
@@ -711,9 +768,8 @@ function getMockResponse(prompt) {
         ]);
     }
     
-    // 模拟简历输出 — 根据版本类型返回不同内容
-    if (prompt.includes('版本一') || prompt.includes('技能匹配')) {
-        return `# 张三
+    // 模拟完整优化简历输出（新架构只调用一次 AI，返回包含所有板块的完整简历）
+    return `# 张三
 电话：138-xxxx-xxxx | 邮箱：zhangsan@email.com | GitHub: github.com/zhangsan
 
 ## 求职意向
@@ -721,6 +777,7 @@ function getMockResponse(prompt) {
 
 ## 教育背景
 ### XX大学 | 计算机科学与技术 | 本科 | 2016 - 2020
+- GPA 3.8/4.0，获校级一等奖学金
 
 ## 专业技能
 - **前端框架**（精通）：React 18、Vue 3、Next.js，在3个核心项目中深度使用
@@ -734,29 +791,12 @@ function getMockResponse(prompt) {
 - 使用 React + TypeScript 主导核心产品重构，运用虚拟列表和代码分割技术，**首屏加载提升 40%**
 - 搭建 CI/CD 流水线（GitHub Actions + Docker），**部署效率提升 60%**
 - 带领 5 人团队，推行 TypeScript 严格模式，代码缺陷率下降 35%
+- 制定前端代码规范，引入 ESLint + Prettier + Husky 全流程质量保障
 
 ### YY互联网公司 | 前端开发工程师 | 2020.07 - 2022.02
 - 使用 Vue 3 + Composition API 重构业务模块，覆盖 **100万+** 用户
 - 基于 IntersectionObserver 优化图片懒加载，移动端首屏时间**降低 50%**
-
-## 项目经验
-### 电商平台管理系统 | React + TypeScript + Ant Design
-- 负责订单管理、商品管理等核心模块，实现复杂表格虚拟滚动
-- 封装通用业务组件 20+，团队开发效率提升 30%
-
-## 自我评价
-- 5年前端开发经验，精通 React 生态，擅长性能优化和工程化建设`;
-    }
-    
-    if (prompt.includes('版本二') || prompt.includes('项目经验')) {
-        return `# 张三
-电话：138-xxxx-xxxx | 邮箱：zhangsan@email.com | GitHub: github.com/zhangsan
-
-## 求职意向
-前端开发工程师 | 期望薪资面议
-
-## 教育背景
-### XX大学 | 计算机科学与技术 | 本科 | 2016 - 2020
+- 参与组件库建设，沉淀 30+ 可复用组件，提升团队开发效率
 
 ## 项目经验
 ### 电商平台管理系统 | React + TypeScript + Ant Design | 技术负责人
@@ -777,40 +817,9 @@ function getMockResponse(prompt) {
 - **行动**：基于 Docker 容器化构建环境，配置 GitHub Actions 自动化流水线
 - **结果**：部署时间从 30分钟缩短至 **5分钟**，人工操作减少 90%
 
-## 工作经历
-### XX科技有限公司 | 高级前端工程师 | 2022.03 - 至今
-- 负责核心产品前端架构，带领5人团队
-- 主导3个重点项目的技术选型和落地
-
-### YY互联网公司 | 前端开发工程师 | 2020.07 - 2022.02
-- 负责移动端业务模块开发和性能优化
-
-## 专业技能
-- 前端：React、Vue、TypeScript、Next.js
-- 工程化：Webpack、Vite、Docker、CI/CD
-- 后端：Node.js、Express
-
 ## 自我评价
+- 5年前端开发经验，精通 React 生态，擅长性能优化和工程化建设
 - 善于从零到一搭建技术体系，多个项目从架构设计到上线交付的完整经验`;
-    }
-    
-    // 版本三：精简一页版
-    return `# 张三
-138-xxxx-xxxx | zhangsan@email.com | github.com/zhangsan
-
-## 专业技能
-React, TypeScript, Vue 3, Next.js, Webpack, Vite, Node.js, Docker, CI/CD, Jest
-
-## 工作经历
-### XX科技有限公司 | 高级前端工程师 | 2022.03 - 至今
-- React + TypeScript 重构核心产品，首屏性能提升 40%，搭建 CI/CD 流水线
-- 带领5人团队，主导电商管理系统等3个重点项目
-
-### YY互联网公司 | 前端开发工程师 | 2020.07 - 2022.02
-- Vue 3 开发业务模块覆盖100万+用户，移动端首屏时间降低 50%
-
-## 教育背景
-### XX大学 | 计算机科学与技术 | 本科 | 2016 - 2020`;
 }
 
 module.exports = { optimize };
