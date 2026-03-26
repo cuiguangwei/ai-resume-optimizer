@@ -361,6 +361,20 @@ function renderResults() {
     document.getElementById('original-resume').textContent = original || state.resumeText;
 
     if (versions && versions.length > 0) {
+        // 调试输出 + 差异检测
+        console.log('[renderResults] 版本数:', versions.length);
+        versions.forEach((v, i) => {
+            console.log(`  版本${i+1}: ${v ? v.length : 0}字`);
+        });
+        
+        // 更新版本按钮显示版本字数信息
+        const versionBtns = document.querySelectorAll('.version-btn');
+        const versionLabels = ['技能匹配', '项目经验', '精简一页'];
+        versionBtns.forEach((btn, i) => {
+            const charCount = versions[i] ? versions[i].length : 0;
+            btn.textContent = `版本${['一','二','三'][i]}：${versionLabels[i]}（${charCount}字）`;
+        });
+        
         renderVersion(0);
     }
 }
@@ -463,7 +477,16 @@ function switchVersion(index) {
     document.querySelectorAll('.version-btn').forEach((b, i) => {
         b.classList.toggle('active', i === index);
     });
-    renderVersion(index);
+    
+    // 添加切换动画效果
+    const container = document.getElementById('optimized-resume');
+    container.style.opacity = '0.3';
+    container.style.transition = 'opacity 0.15s ease';
+    
+    setTimeout(() => {
+        renderVersion(index);
+        container.style.opacity = '1';
+    }, 150);
 }
 
 // ============ 导出功能 ============

@@ -12,8 +12,11 @@ const API_TIMEOUT = 60000;
 
 /**
  * 调用 LLM API（带超时控制）
+ * @param {string} prompt 用户提示词
+ * @param {number} maxTokens 最大生成 token 数
+ * @param {object} options 额外参数 { temperature, seed }
  */
-async function callLLM(prompt, maxTokens = 4000) {
+async function callLLM(prompt, maxTokens = 4000, options = {}) {
     if (!API_KEY) {
         console.warn('未配置 API Key，使用模拟数据');
         return getMockResponse(prompt);
@@ -22,6 +25,24 @@ async function callLLM(prompt, maxTokens = 4000) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
+    const temperature = options.temperature ?? 0.5;
+    const requestBody = {
+        model: MODEL,
+        messages: [
+            { role: 'system', content: '你是一位专业的简历优化专家。你的核心能力是根据目标职位要求优化简历内容和结构。你必须严格使用标准 Markdown 格式输出简历：# 一级标题用于姓名，## 二级标题用于板块（如工作经历、教育背景），### 三级标题用于公司/学校/项目名称，- 用于列表项。绝对不要重复输出相同的内容，不要输出说明性文字。禁止输出任何乱码、哈希值、随机字符串、Base64 编码或其他无意义字符，每一行必须是有意义的中文或英文内容。' },
+            { role: 'user', content: prompt }
+        ],
+        max_tokens: maxTokens,
+        temperature: temperature,
+        frequency_penalty: 1.5,
+        presence_penalty: 0.8
+    };
+
+    // 添加 seed 参数（DeepSeek/OpenAI 都支持）以增加版本间差异
+    if (options.seed != null) {
+        requestBody.seed = options.seed;
+    }
+
     try {
         const response = await fetch(`${BASE_URL}/chat/completions`, {
             method: 'POST',
@@ -29,17 +50,7 @@ async function callLLM(prompt, maxTokens = 4000) {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${API_KEY}`
             },
-            body: JSON.stringify({
-                model: MODEL,
-                messages: [
-                    { role: 'system', content: '你是一位专业的简历优化专家。你的核心能力是根据目标职位要求优化简历内容和结构。你必须严格使用标准 Markdown 格式输出简历：# 一级标题用于姓名，## 二级标题用于板块（如工作经历、教育背景），### 三级标题用于公司/学校/项目名称，- 用于列表项。绝对不要重复输出相同的内容，不要输出说明性文字。禁止输出任何乱码、哈希值、随机字符串、Base64 编码或其他无意义字符，每一行必须是有意义的中文或英文内容。' },
-                    { role: 'user', content: prompt }
-                ],
-                max_tokens: maxTokens,
-                temperature: 0.5,
-                frequency_penalty: 1.5,
-                presence_penalty: 0.8
-            }),
+            body: JSON.stringify(requestBody),
             signal: controller.signal
         });
 
@@ -287,61 +298,263 @@ ${jd.substring(0, 800)}
 }
 
 /**
- * 生成多个版本的优化简历（并行生成）
+ * 生成多个版本的优化简历
+ * 核心策略：串行生成 + 相似度检测 + 强制差异化
  */
 async function generateVersions(resume, jd, configs) {
-    const [version1, version2, version3] = await Promise.all([
-        generateVersion(resume, jd, 'skill'),
-        generateVersion(resume, jd, 'project'),
-        generateVersion(resume, jd, 'concise')
-    ]);
+    const styles = ['skill', 'project', 'concise'];
+    const versions = [];
     
-    // 日志：打印各版本长度和差异
-    console.log('[generateVersions] 版本1长度:', version1?.length, '版本2长度:', version2?.length, '版本3长度:', version3?.length);
-    if (version1 === version2) console.warn('[generateVersions] 警告: 版本1和版本2内容相同！');
-    if (version1 === version3) console.warn('[generateVersions] 警告: 版本1和版本3内容相同！');
+    // 串行生成三个版本（避免并行导致模型返回相同结果/缓存命中）
+    for (let i = 0; i < styles.length; i++) {
+        const style = styles[i];
+        // 每个版本用不同的 seed 和 temperature
+        const seed = Date.now() + i * 1000 + Math.floor(Math.random() * 10000);
+        const temperature = [0.4, 0.6, 0.3][i]; // 每个版本不同温度
+        
+        let version = await generateVersion(resume, jd, style, { seed, temperature });
+        
+        // 检查与已生成版本的相似度
+        for (let j = 0; j < versions.length; j++) {
+            if (textSimilarity(version, versions[j]) > 0.85) {
+                console.warn(`[generateVersions] 版本${i+1}与版本${j+1}相似度>85%，启动强制差异化...`);
+                // 用更强的差异化提示重新生成
+                version = await generateVersion(resume, jd, style, { 
+                    seed: seed + 99999, 
+                    temperature: 0.8, 
+                    forceDifferent: true 
+                });
+                
+                // 如果仍然相似，使用编程方式强制差异化
+                if (textSimilarity(version, versions[j]) > 0.85) {
+                    console.warn(`[generateVersions] 版本${i+1}重试后仍相似，使用编程差异化`);
+                    version = programmaticDifferentiate(version, style, resume);
+                }
+                break;
+            }
+        }
+        
+        versions.push(version);
+    }
     
-    return [version1, version2, version3];
+    console.log('[generateVersions] 版本长度:', versions.map((v, i) => `v${i+1}=${v?.length || 0}`).join(', '));
+    console.log('[generateVersions] 版本间相似度:', 
+        `v1-v2=${(textSimilarity(versions[0], versions[1]) * 100).toFixed(1)}%`,
+        `v1-v3=${(textSimilarity(versions[0], versions[2]) * 100).toFixed(1)}%`,
+        `v2-v3=${(textSimilarity(versions[1], versions[2]) * 100).toFixed(1)}%`
+    );
+    
+    return versions;
+}
+
+/**
+ * 计算两段文本的相似度（0-1，基于行集合的 Jaccard 相似度）
+ */
+function textSimilarity(a, b) {
+    if (!a || !b) return 0;
+    if (a === b) return 1;
+    
+    // 以非空行为单位计算相似度
+    const linesA = new Set(a.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#') && l.length > 5));
+    const linesB = new Set(b.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#') && l.length > 5));
+    
+    if (linesA.size === 0 && linesB.size === 0) return 1;
+    if (linesA.size === 0 || linesB.size === 0) return 0;
+    
+    let intersection = 0;
+    for (const line of linesA) {
+        if (linesB.has(line)) intersection++;
+    }
+    
+    const union = linesA.size + linesB.size - intersection;
+    return union > 0 ? intersection / union : 0;
+}
+
+/**
+ * 当 AI 无法生成差异内容时，用编程方式强制差异化
+ * 根据 style 重新排列简历板块，修改措辞
+ */
+function programmaticDifferentiate(content, style, originalResume) {
+    if (!content) return content;
+    
+    // 解析 markdown 为板块
+    const sections = parseMarkdownSections(content);
+    if (sections.length < 2) return content; // 无法处理
+    
+    const header = sections[0]; // 姓名+联系方式
+    const body = sections.slice(1);
+    
+    // 按板块名分类
+    const sectionMap = {};
+    for (const sec of body) {
+        const titleLine = sec.split('\n')[0].replace(/^## /, '').trim();
+        sectionMap[titleLine] = sec;
+    }
+    
+    // 根据 style 决定板块顺序
+    let orderedKeys;
+    switch (style) {
+        case 'skill': {
+            // 技能优先
+            const skillKeys = Object.keys(sectionMap).filter(k => /技能|技术|skill/i.test(k));
+            const workKeys = Object.keys(sectionMap).filter(k => /工作|经历|experience/i.test(k));
+            const eduKeys = Object.keys(sectionMap).filter(k => /教育|学历|education/i.test(k));
+            const projKeys = Object.keys(sectionMap).filter(k => /项目|project/i.test(k));
+            const restKeys = Object.keys(sectionMap).filter(k => !skillKeys.includes(k) && !workKeys.includes(k) && !eduKeys.includes(k) && !projKeys.includes(k));
+            orderedKeys = [...eduKeys, ...skillKeys, ...workKeys, ...projKeys, ...restKeys];
+            break;
+        }
+        case 'project': {
+            // 项目优先
+            const projKeys = Object.keys(sectionMap).filter(k => /项目|project/i.test(k));
+            const workKeys = Object.keys(sectionMap).filter(k => /工作|经历|experience/i.test(k));
+            const eduKeys = Object.keys(sectionMap).filter(k => /教育|学历|education/i.test(k));
+            const skillKeys = Object.keys(sectionMap).filter(k => /技能|技术|skill/i.test(k));
+            const restKeys = Object.keys(sectionMap).filter(k => !projKeys.includes(k) && !workKeys.includes(k) && !eduKeys.includes(k) && !skillKeys.includes(k));
+            orderedKeys = [...eduKeys, ...projKeys, ...workKeys, ...skillKeys, ...restKeys];
+            break;
+        }
+        case 'concise': {
+            // 精简版：技能 → 工作 → 教育（删减项目详情）
+            const skillKeys = Object.keys(sectionMap).filter(k => /技能|技术|skill/i.test(k));
+            const workKeys = Object.keys(sectionMap).filter(k => /工作|经历|experience/i.test(k));
+            const eduKeys = Object.keys(sectionMap).filter(k => /教育|学历|education/i.test(k));
+            const restKeys = Object.keys(sectionMap).filter(k => !skillKeys.includes(k) && !workKeys.includes(k) && !eduKeys.includes(k));
+            orderedKeys = [...skillKeys, ...workKeys, ...eduKeys, ...restKeys.slice(0, 1)]; // 精简版只保留1个其他板块
+            break;
+        }
+        default:
+            orderedKeys = Object.keys(sectionMap);
+    }
+    
+    // 重新组装
+    let result = header + '\n\n';
+    for (const key of orderedKeys) {
+        if (sectionMap[key]) {
+            let sectionContent = sectionMap[key];
+            // 精简版额外处理：删减每个板块的列表项
+            if (style === 'concise') {
+                sectionContent = truncateSection(sectionContent, 3);
+            }
+            result += sectionContent + '\n\n';
+        }
+    }
+    
+    return result.trim();
+}
+
+/**
+ * 将 Markdown 按 ## 标题分割成板块
+ */
+function parseMarkdownSections(markdown) {
+    const lines = markdown.split('\n');
+    const sections = [];
+    let current = [];
+    
+    for (const line of lines) {
+        if (line.trim().startsWith('## ') && current.length > 0) {
+            sections.push(current.join('\n').trim());
+            current = [];
+        }
+        current.push(line);
+    }
+    if (current.length > 0) {
+        sections.push(current.join('\n').trim());
+    }
+    
+    return sections;
+}
+
+/**
+ * 截断板块：每个 ### 项下最多保留 maxBullets 个列表项
+ */
+function truncateSection(sectionContent, maxBullets) {
+    const lines = sectionContent.split('\n');
+    const result = [];
+    let bulletCount = 0;
+    let inItem = false;
+    
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('### ')) {
+            bulletCount = 0;
+            inItem = true;
+            result.push(line);
+        } else if (trimmed.startsWith('## ')) {
+            result.push(line);
+            inItem = false;
+        } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+            bulletCount++;
+            if (bulletCount <= maxBullets) {
+                result.push(line);
+            }
+        } else {
+            result.push(line);
+        }
+    }
+    
+    return result.join('\n');
 }
 
 /**
  * 生成单个版本的优化简历（带质量检测和重试）
+ * @param {object} options { seed, temperature, forceDifferent }
  */
-async function generateVersion(resume, jd, style) {
+async function generateVersion(resume, jd, style, options = {}) {
+    const { seed, temperature = 0.5, forceDifferent = false } = options;
+    
     const stylePrompts = {
         skill: `【版本一：突出技能匹配】
-你的任务是以"技能匹配"为核心重新组织简历。具体要求：
-1. 将"专业技能"板块放在工作经历之前（紧跟教育背景后面）
-2. 技能列表按照与JD的匹配度从高到低排列
-3. 在每段工作经历的描述中，重点突出使用了哪些与JD相关的技术和技能
-4. 用量化数据（百分比、数字）展示技能应用的成果
-5. 为技能添加熟练度标注（如：精通、熟练、熟悉）
-6. 板块顺序必须是：基本信息 → 求职意向 → 教育背景 → 专业技能 → 工作经历 → 项目经验 → 自我评价`,
+你的任务是以"技能匹配"为核心重新组织简历。这个版本的核心特色是：技能板块前置并详细展开。
+
+具体要求（必须严格执行）：
+1. 板块顺序必须是：基本信息 → 求职意向 → 教育背景 → 专业技能 → 工作经历 → 项目经验 → 自我评价
+2. 「专业技能」板块是这个版本的核心亮点，必须放在工作经历之前
+3. 技能列表按照与JD的匹配度从高到低排列
+4. 为每项技能添加熟练度标注（精通/熟练/熟悉），并简述在哪个项目中使用过
+5. 在工作经历描述中，重点突出使用了哪些与JD相关的技术和技能
+6. 用量化数据（百分比、数字）展示技能应用的成果`,
         
         project: `【版本二：突出项目经验】
-你的任务是以"项目经验"为核心重新组织简历。具体要求：
-1. 将"项目经验"板块提前到仅次于教育背景的位置
-2. 每个项目使用 STAR 法则详细描述：背景(Situation)、任务(Task)、行动(Action)、结果(Result)
-3. 为每个项目标注技术栈和个人角色
-4. 重点展示与目标岗位最相关的 2-3 个项目，充分展开描述
-5. 其他项目可以简要提及
-6. 工作经历部分相应精简，突出与项目相关的职责
-7. 板块顺序必须是：基本信息 → 求职意向 → 教育背景 → 项目经验 → 工作经历 → 专业技能 → 自我评价`,
+你的任务是以"项目经验"为核心重新组织简历。这个版本的核心特色是：项目经验板块前置，使用 STAR 法则详细展开。
+
+具体要求（必须严格执行）：
+1. 板块顺序必须是：基本信息 → 求职意向 → 教育背景 → 项目经验 → 工作经历 → 专业技能 → 自我评价
+2. 「项目经验」板块是这个版本的核心亮点，必须放在工作经历之前
+3. 每个项目使用 STAR 法则展开描述：背景(S)、任务(T)、行动(A)、结果(R)
+4. 为每个项目标注技术栈和你承担的角色
+5. 重点展示与目标岗位最相关的 2-3 个项目，每个项目至少 4 条描述
+6. 工作经历部分相应精简，每段经历最多 2 条要点`,
         
         concise: `【版本三：精简一页版】
-你的任务是将简历精简为一页纸的精华版。具体要求：
-1. 总内容控制在 800 字以内
-2. 只保留与目标岗位最相关的经历和技能
-3. 每段工作经历最多 3 个要点，每个要点不超过 2 行
-4. 删除与目标岗位无关的经历、项目和技能
-5. 合并同类技能，用简洁的标签式列举
-6. 自我评价精简为 1-2 句话的核心亮点
-7. 板块顺序必须是：基本信息 → 专业技能（标签式简列）→ 工作经历（精简）→ 教育背景`
+你的任务是将简历精简为一页纸的精华版。这个版本的核心特色是：极度精炼，只保留最核心的信息。
+
+具体要求（必须严格执行）：
+1. 板块顺序必须是：基本信息 → 专业技能（标签式简列，不分类，直接列技能名）→ 工作经历（精简版）→ 教育背景
+2. 总内容严格控制在 600 字以内（含标点）
+3. 不要「项目经验」板块（合并到工作经历中用一句话提及）
+4. 不要「求职意向」和「自我评价」板块
+5. 每段工作经历最多 2 个要点，每个要点不超过 1 行
+6. 技能部分用逗号分隔的标签列表，不要用列表格式
+7. 删除所有与目标岗位无关的内容`
     };
+
+    // 如果是强制差异化模式，添加额外强调
+    let extraInstruction = '';
+    if (forceDifferent) {
+        extraInstruction = `
+
+【极其重要】你之前生成的版本与其他版本过于相似。这一次你必须：
+- 大幅改变板块的排列顺序
+- 使用完全不同的措辞和句式
+- 调整每个板块的详略程度
+- 确保这个版本与其他版本有明显视觉差异
+`;
+    }
 
     const prompt = `你是一位资深简历优化专家。请根据以下职位描述，优化这份简历。
 
-${stylePrompts[style]}
+${stylePrompts[style]}${extraInstruction}
 
 ---
 
@@ -355,59 +568,23 @@ ${resume}
 
 ---
 
-【输出格式要求 — 必须严格遵守，这是最重要的规则】
+【输出格式要求 — 必须严格遵守】
 
-你必须使用标准 Markdown 格式输出，格式模板如下：
-
-# 姓名
-电话：xxx | 邮箱：xxx | 其他联系方式
-
-## 求职意向
-目标职位 | 期望薪资
-
-## 教育背景
-### 学校名称 | 学历/专业 | 起止时间
-- 相关描述
-
-## 工作经历
-### 公司名称 | 职位 | 起止时间
-- 工作描述1（用量化数据展示成果）
-- 工作描述2
-
-## 项目经验
-### 项目名称 | 技术栈
-- 项目描述（背景、职责、成果）
-
-## 专业技能
-- 技能分类1：技能A、技能B、技能C
-- 技能分类2：技能D、技能E
-
-## 自我评价
-- 核心优势描述
-
-格式铁律（违反将被拒绝）：
-1. 第一行必须是 # 开头的姓名（一级标题），如 # 张三
-2. 每个板块标题必须用 ## 开头（二级标题），如 ## 工作经历
-3. 公司/学校/项目名称必须用 ### 开头（三级标题），如 ### 腾讯 | 高级工程师 | 2022-至今
-4. 列表项必须用 - 开头
-5. 禁止使用代码块、表格、HTML标签
-6. 保持真实性，不编造虚假经历
-7. 直接输出简历正文，前后不要有任何说明文字、分析或总结
-8. 禁止输出乱码、哈希值、随机字符串
-9. 每一行内容都必须是有意义的中文或英文文字`;
+使用标准 Markdown 格式输出。# 用于姓名，## 用于板块标题，### 用于公司/学校/项目名，- 用于列表项。
+直接输出简历正文，前后不要有任何说明文字。禁止输出乱码或无意义字符。`;
 
     // 最多重试 2 次
     const MAX_RETRIES = 2;
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
-            const optimized = await callLLM(prompt, 3000);
+            const optimized = await callLLM(prompt, 3000, { temperature, seed });
             const cleaned = cleanAIOutput(optimized);
             
-            // 质量检测：检查输出是否包含大量乱码
+            // 质量检测
             if (isOutputGarbled(cleaned)) {
                 console.warn(`[generateVersion] ${style} 版本第${attempt + 1}次生成检测到乱码，${attempt < MAX_RETRIES ? '重试中...' : '使用原始简历'}`);
                 if (attempt < MAX_RETRIES) continue;
-                return resume; // 重试耗尽，返回原始简历
+                return resume;
             }
             
             return cleaned;
@@ -534,35 +711,106 @@ function getMockResponse(prompt) {
         ]);
     }
     
-    // 模拟简历输出
-    return `# 张三 | 前端开发工程师
+    // 模拟简历输出 — 根据版本类型返回不同内容
+    if (prompt.includes('版本一') || prompt.includes('技能匹配')) {
+        return `# 张三
 电话：138-xxxx-xxxx | 邮箱：zhangsan@email.com | GitHub: github.com/zhangsan
 
+## 求职意向
+前端开发工程师 | 期望薪资面议
+
+## 教育背景
+### XX大学 | 计算机科学与技术 | 本科 | 2016 - 2020
+
 ## 专业技能
-- **前端开发**：精通 React、Vue 框架，熟悉 TypeScript
-- **工程化**：熟练使用 Webpack、Vite 构建工具，了解 CI/CD 流程
-- **后端基础**：熟悉 Node.js、Express，了解 Docker 容器化部署
+- **前端框架**（精通）：React 18、Vue 3、Next.js，在3个核心项目中深度使用
+- **类型系统**（熟练）：TypeScript，全量 TS 项目开发经验
+- **工程化工具**（熟练）：Webpack 5、Vite、Rollup，搭建过完整构建流水线
+- **后端技术**（熟悉）：Node.js、Express、Docker、Nginx
+- **测试工具**（熟悉）：Jest、Cypress、React Testing Library
 
 ## 工作经历
-
 ### XX科技有限公司 | 高级前端工程师 | 2022.03 - 至今
-- 负责公司核心产品前端架构设计，使用 React + TypeScript 重构主站，**性能提升 40%**
-- 主导前端工程化建设，搭建 CI/CD 流水线，**部署效率提升 60%**
-- 带领 5 人团队完成多个核心项目，代码质量和交付效率显著提升
+- 使用 React + TypeScript 主导核心产品重构，运用虚拟列表和代码分割技术，**首屏加载提升 40%**
+- 搭建 CI/CD 流水线（GitHub Actions + Docker），**部署效率提升 60%**
+- 带领 5 人团队，推行 TypeScript 严格模式，代码缺陷率下降 35%
 
 ### YY互联网公司 | 前端开发工程师 | 2020.07 - 2022.02
-- 使用 Vue.js 开发多个业务模块，覆盖用户 100 万+
-- 优化移动端 H5 页面，首屏加载时间**降低 50%**
-- 参与组件库建设，沉淀 30+ 可复用组件
+- 使用 Vue 3 + Composition API 重构业务模块，覆盖 **100万+** 用户
+- 基于 IntersectionObserver 优化图片懒加载，移动端首屏时间**降低 50%**
+
+## 项目经验
+### 电商平台管理系统 | React + TypeScript + Ant Design
+- 负责订单管理、商品管理等核心模块，实现复杂表格虚拟滚动
+- 封装通用业务组件 20+，团队开发效率提升 30%
+
+## 自我评价
+- 5年前端开发经验，精通 React 生态，擅长性能优化和工程化建设`;
+    }
+    
+    if (prompt.includes('版本二') || prompt.includes('项目经验')) {
+        return `# 张三
+电话：138-xxxx-xxxx | 邮箱：zhangsan@email.com | GitHub: github.com/zhangsan
+
+## 求职意向
+前端开发工程师 | 期望薪资面议
 
 ## 教育背景
 ### XX大学 | 计算机科学与技术 | 本科 | 2016 - 2020
 
 ## 项目经验
-### 电商平台管理系统
-- 技术栈：React + TypeScript + Ant Design
-- 负责订单管理、商品管理等核心模块开发
-- 实现复杂表格组件，支持大数据量渲染`;
+### 电商平台管理系统 | React + TypeScript + Ant Design | 技术负责人
+- **背景**：公司核心电商后台年久失修，基于 jQuery 的旧系统无法支撑业务快速迭代
+- **任务**：主导整个后台管理系统的技术选型和架构重构
+- **行动**：采用 React 18 + TypeScript + Ant Design Pro 方案，设计微前端架构支持多团队并行开发；实现虚拟列表处理万级商品数据；封装 20+ 通用业务组件
+- **结果**：页面响应速度提升 **60%**，团队开发效率提升 **30%**，系统稳定性达 99.9%
+
+### 移动端 H5 营销平台 | Vue 3 + Vant + SSR | 核心开发者
+- **背景**：公司需要高性能的移动端营销活动页面，日均 PV 超 50万
+- **任务**：负责活动页面框架设计和核心交互开发
+- **行动**：基于 Vue 3 SSR 方案优化首屏渲染；使用 IntersectionObserver 实现智能懒加载；接入 CDN 和 Service Worker 缓存策略
+- **结果**：首屏加载时间从 3.2s 降至 **1.5s**，用户转化率提升 **25%**
+
+### 前端 CI/CD 自动化平台 | Node.js + Docker + GitHub Actions
+- **背景**：团队部署流程手动操作多、耗时长、容易出错
+- **任务**：从零搭建自动化部署平台
+- **行动**：基于 Docker 容器化构建环境，配置 GitHub Actions 自动化流水线
+- **结果**：部署时间从 30分钟缩短至 **5分钟**，人工操作减少 90%
+
+## 工作经历
+### XX科技有限公司 | 高级前端工程师 | 2022.03 - 至今
+- 负责核心产品前端架构，带领5人团队
+- 主导3个重点项目的技术选型和落地
+
+### YY互联网公司 | 前端开发工程师 | 2020.07 - 2022.02
+- 负责移动端业务模块开发和性能优化
+
+## 专业技能
+- 前端：React、Vue、TypeScript、Next.js
+- 工程化：Webpack、Vite、Docker、CI/CD
+- 后端：Node.js、Express
+
+## 自我评价
+- 善于从零到一搭建技术体系，多个项目从架构设计到上线交付的完整经验`;
+    }
+    
+    // 版本三：精简一页版
+    return `# 张三
+138-xxxx-xxxx | zhangsan@email.com | github.com/zhangsan
+
+## 专业技能
+React, TypeScript, Vue 3, Next.js, Webpack, Vite, Node.js, Docker, CI/CD, Jest
+
+## 工作经历
+### XX科技有限公司 | 高级前端工程师 | 2022.03 - 至今
+- React + TypeScript 重构核心产品，首屏性能提升 40%，搭建 CI/CD 流水线
+- 带领5人团队，主导电商管理系统等3个重点项目
+
+### YY互联网公司 | 前端开发工程师 | 2020.07 - 2022.02
+- Vue 3 开发业务模块覆盖100万+用户，移动端首屏时间降低 50%
+
+## 教育背景
+### XX大学 | 计算机科学与技术 | 本科 | 2016 - 2020`;
 }
 
 module.exports = { optimize };
