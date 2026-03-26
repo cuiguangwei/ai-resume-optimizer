@@ -824,142 +824,622 @@ textarea.jd-input {
     border: 1px solid #ddd;
 }
 
-/* ============ 主题：科技互联网 ============ */
+/* ================================================================
+   主题：科技互联网 — 赛博/极客风
+   灵感：深色代码编辑器、终端、渐变科技感
+   ================================================================ */
+.theme-tech .resume-inner {
+    background: linear-gradient(135deg, #F8F9FF 0%, #F0F1FF 50%, #EEF0FF 100%);
+    border-left: 4px solid #6366F1;
+    border-radius: 0 8px 8px 0;
+    position: relative;
+}
+.theme-tech .resume-inner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(99,102,241,0.06) 0%, transparent 70%);
+    pointer-events: none;
+}
 .theme-tech .resume-header {
-    border-bottom-color: #6366F1;
+    border-bottom: none;
+    background: linear-gradient(90deg, #312E81, #4F46E5);
+    margin: -40px -48px 28px -48px;
+    padding: 32px 48px 24px 48px;
+    border-radius: 0 8px 0 0;
 }
 .theme-tech .resume-header h1 {
-    color: #312E81;
+    color: #FFFFFF;
+    font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+    font-size: 26px;
+    letter-spacing: 3px;
+    font-weight: 800;
+}
+.theme-tech .resume-header h1::before {
+    content: '> ';
+    color: #A5B4FC;
+    font-weight: 400;
+}
+.theme-tech .resume-header .contact-info {
+    color: #C7D2FE;
+}
+.theme-tech .resume-header .contact-info span {
+    background: rgba(255,255,255,0.1);
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    backdrop-filter: blur(4px);
 }
 .theme-tech .section-title {
     color: #4F46E5;
-    border-bottom-color: #6366F1;
+    border-bottom: none;
+    background: linear-gradient(90deg, #EEF2FF, transparent);
+    padding: 8px 14px;
+    border-radius: 4px;
+    font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    position: relative;
+}
+.theme-tech .section-title::before {
+    content: '//';
+    color: #A5B4FC;
+    margin-right: 8px;
+    font-weight: 400;
 }
 .theme-tech .exp-company {
     color: #312E81;
+    font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
 }
-.theme-tech .skill-tag {
+.theme-tech .exp-date {
+    color: #6366F1;
+    font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+    font-size: 12px;
     background: #EEF2FF;
-    color: #4338CA;
-    border-color: #C7D2FE;
-}
-.theme-tech ul li::before {
-    background: #6366F1;
-}
-
-/* ============ 主题：金融商务 ============ */
-.theme-finance .resume-header {
-    border-bottom-color: #B8860B;
-}
-.theme-finance .resume-header h1 {
-    color: #1a1a1a;
-    font-family: 'Georgia', 'Times New Roman', serif;
-}
-.theme-finance .section-title {
-    color: #8B6914;
-    border-bottom-color: #B8860B;
-    font-family: 'Georgia', 'Times New Roman', serif;
-}
-.theme-finance .exp-company {
-    color: #1a1a1a;
-}
-.theme-finance .skill-tag {
-    background: #FFF8E1;
-    color: #8B6914;
-    border-color: #D4A84A;
+    padding: 1px 8px;
     border-radius: 4px;
 }
-.theme-finance ul li::before {
-    background: #B8860B;
-    border-radius: 0;
+.theme-tech .exp-role {
+    color: #7C3AED;
+    font-style: normal;
+    font-weight: 500;
+}
+.theme-tech .skill-tag {
+    background: linear-gradient(135deg, #EEF2FF, #E0E7FF);
+    color: #3730A3;
+    border: 1px solid #C7D2FE;
+    border-radius: 6px;
+    font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+    font-size: 12px;
+    padding: 4px 12px;
+    box-shadow: 0 1px 3px rgba(99,102,241,0.1);
+}
+.theme-tech .resume-section ul li {
+    padding-left: 20px;
+}
+.theme-tech .resume-section ul li::before {
+    content: '';
+    background: none;
     width: 6px;
-    height: 2px;
-    top: 12px;
+    height: 6px;
+    border: 2px solid #6366F1;
+    border-radius: 2px;
+    top: 9px;
+}
+.theme-tech .experience-item {
+    border-left: 2px solid #E0E7FF;
+    padding-left: 16px;
+    margin-left: 4px;
+    position: relative;
+}
+.theme-tech .experience-item::before {
+    content: '';
+    position: absolute;
+    left: -5px;
+    top: 6px;
+    width: 8px;
+    height: 8px;
+    background: #6366F1;
+    border-radius: 50%;
 }
 
-/* ============ 主题：创意设计 ============ */
+/* ================================================================
+   主题：金融商务 — 投行/四大风
+   灵感：深蓝+金色、衬线字体、双线边框、庄重感
+   ================================================================ */
+.theme-finance .resume-inner {
+    background: #FFFEF8;
+    border-top: 4px double #1B365D;
+    border-bottom: 4px double #1B365D;
+}
+.theme-finance .resume-header {
+    text-align: center;
+    border-bottom: 1px solid #C9A84C;
+    padding-bottom: 24px;
+    margin-bottom: 28px;
+    position: relative;
+}
+.theme-finance .resume-header::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 30%;
+    right: 30%;
+    height: 1px;
+    background: #C9A84C;
+}
+.theme-finance .resume-header h1 {
+    color: #1B365D;
+    font-family: 'Georgia', 'Palatino', 'Times New Roman', 'SimSun', serif;
+    font-size: 30px;
+    letter-spacing: 6px;
+    font-weight: 700;
+}
+.theme-finance .resume-header .contact-info {
+    color: #5C6E83;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-size: 12px;
+    letter-spacing: 1px;
+}
+.theme-finance .resume-header .contact-info span {
+    border-right: 1px solid #C9A84C;
+    padding-right: 12px;
+    margin-right: 0;
+}
+.theme-finance .resume-header .contact-info span:last-child {
+    border-right: none;
+    padding-right: 0;
+}
+.theme-finance .section-title {
+    color: #1B365D;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    border-bottom: 2px solid #1B365D;
+    text-transform: none;
+    letter-spacing: 3px;
+    font-size: 15px;
+    padding-bottom: 8px;
+    position: relative;
+}
+.theme-finance .section-title::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    width: 60px;
+    height: 2px;
+    background: #C9A84C;
+}
+.theme-finance .exp-header {
+    border-bottom: 1px dotted #D4C5A0;
+    padding-bottom: 4px;
+    margin-bottom: 6px;
+}
+.theme-finance .exp-company {
+    color: #1B365D;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-size: 15px;
+}
+.theme-finance .exp-date {
+    color: #8B7D56;
+    font-family: 'Georgia', 'Times New Roman', serif;
+}
+.theme-finance .exp-role {
+    color: #4A5568;
+    font-style: normal;
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.theme-finance .skill-tag {
+    background: #F9F5EB;
+    color: #1B365D;
+    border: 1px solid #C9A84C;
+    border-radius: 2px;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-size: 12px;
+    padding: 3px 14px;
+    letter-spacing: 0.5px;
+}
+.theme-finance .resume-section ul li {
+    padding-left: 20px;
+    font-family: 'Georgia', 'Times New Roman', 'PingFang SC', serif;
+    font-size: 13.5px;
+    color: #2D3748;
+}
+.theme-finance .resume-section ul li::before {
+    content: '';
+    background: #C9A84C;
+    width: 6px;
+    height: 1.5px;
+    border-radius: 0;
+    top: 13px;
+}
+.theme-finance .resume-section p {
+    font-family: 'Georgia', 'Times New Roman', 'PingFang SC', serif;
+    font-size: 13.5px;
+    color: #2D3748;
+}
+
+/* ================================================================
+   主题：创意设计 — 设计师/作品集风
+   灵感：大胆配色、不对称布局、圆角卡片、渐变装饰
+   ================================================================ */
+.theme-creative .resume-inner {
+    background: linear-gradient(180deg, #FFF5F9 0%, #FFFFFF 30%, #FFF8F0 100%);
+    position: relative;
+    overflow: hidden;
+}
+.theme-creative .resume-inner::before {
+    content: '';
+    position: absolute;
+    top: -80px;
+    right: -80px;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(236,72,153,0.08) 0%, rgba(251,146,60,0.04) 50%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+.theme-creative .resume-inner::after {
+    content: '';
+    position: absolute;
+    bottom: -60px;
+    left: -60px;
+    width: 160px;
+    height: 160px;
+    background: radial-gradient(circle, rgba(168,85,247,0.06) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
 .theme-creative .resume-header {
-    border-bottom: 3px dashed #EC4899;
+    border-bottom: none;
+    text-align: left;
+    padding: 0 0 20px 0;
+    margin-bottom: 28px;
+    position: relative;
+}
+.theme-creative .resume-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #EC4899, #F97316, #A855F7, #3B82F6);
+    border-radius: 2px;
 }
 .theme-creative .resume-header h1 {
-    color: #9D174D;
-    font-size: 30px;
+    color: #1a1a1a;
+    font-size: 34px;
+    font-weight: 900;
+    letter-spacing: -1px;
+    text-align: left;
+    line-height: 1.2;
+    background: linear-gradient(135deg, #9D174D, #7C3AED);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+.theme-creative .resume-header .contact-info {
+    justify-content: flex-start;
+    gap: 6px 16px;
+    color: #6B7280;
+    font-size: 13px;
+    margin-top: 8px;
 }
 .theme-creative .section-title {
-    color: #BE185D;
-    border-bottom: 2px dashed #F472B6;
-    font-style: italic;
+    color: #9D174D;
+    border-bottom: none;
+    font-size: 18px;
+    font-weight: 800;
+    text-transform: none;
+    letter-spacing: 0;
+    padding: 0;
+    margin-bottom: 14px;
+    position: relative;
+    display: inline-block;
+}
+.theme-creative .section-title::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 6px;
+    background: linear-gradient(90deg, rgba(236,72,153,0.3), rgba(168,85,247,0.15));
+    border-radius: 3px;
+    z-index: -1;
+}
+.theme-creative .resume-section {
+    background: rgba(255,255,255,0.6);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 12px;
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(236,72,153,0.08);
+}
+.theme-creative .experience-item {
+    background: rgba(255,255,255,0.5);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    border: 1px solid rgba(236,72,153,0.06);
+    transition: box-shadow 0.2s;
 }
 .theme-creative .exp-company {
-    color: #831843;
+    color: #7C3AED;
+    font-size: 16px;
+    font-weight: 700;
+}
+.theme-creative .exp-date {
+    color: #EC4899;
+    font-weight: 600;
+    font-size: 12px;
+    background: #FDF2F8;
+    padding: 2px 10px;
+    border-radius: 20px;
+}
+.theme-creative .exp-role {
+    color: #6B7280;
+    font-style: normal;
+    font-weight: 600;
+    font-size: 13px;
 }
 .theme-creative .skill-tag {
-    background: linear-gradient(135deg, #FDF2F8, #FCE7F3);
-    color: #9D174D;
-    border-color: #F9A8D4;
-    border-radius: 12px;
+    background: linear-gradient(135deg, #FDF2F8, #F5F3FF);
+    color: #7C3AED;
+    border: none;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 12px;
+    padding: 5px 16px;
+    box-shadow: 0 2px 8px rgba(168,85,247,0.1);
 }
-.theme-creative ul li::before {
-    background: #EC4899;
-    border-radius: 0;
-    width: 0;
-    height: 0;
-    border-left: 4px solid #EC4899;
-    border-top: 3px solid transparent;
-    border-bottom: 3px solid transparent;
-    top: 10px;
+.theme-creative .resume-section ul li {
+    padding-left: 22px;
+    color: #374151;
+}
+.theme-creative .resume-section ul li::before {
+    content: '';
+    background: linear-gradient(135deg, #EC4899, #A855F7);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    top: 9px;
 }
 
-/* ============ 主题：医疗科研 ============ */
+/* ================================================================
+   主题：医疗科研 — 学术论文/科研报告风
+   灵感：严谨、清晰、编号系统、绿色生命感、微型数据可视化
+   ================================================================ */
+.theme-medical .resume-inner {
+    background: #FCFFFE;
+    border-top: 3px solid #059669;
+    position: relative;
+}
+.theme-medical .resume-inner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 39px,
+        rgba(5,150,105,0.03) 39px,
+        rgba(5,150,105,0.03) 40px
+    );
+    pointer-events: none;
+}
 .theme-medical .resume-header {
-    border-bottom-color: #059669;
+    border-bottom: 2px solid #059669;
+    padding-bottom: 20px;
+    margin-bottom: 24px;
+    text-align: center;
 }
 .theme-medical .resume-header h1 {
     color: #064E3B;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 4px;
+}
+.theme-medical .resume-header .contact-info {
+    color: #4B7A6A;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+}
+.theme-medical .resume-header .contact-info span {
+    border: 1px solid #D1FAE5;
+    padding: 2px 10px;
+    border-radius: 3px;
+    background: #F0FDF4;
+}
+.theme-medical .resume-section {
+    counter-increment: section;
+    position: relative;
 }
 .theme-medical .section-title {
-    color: #047857;
-    border-bottom-color: #059669;
+    color: #064E3B;
+    border-bottom: 1px solid #059669;
+    font-size: 15px;
+    letter-spacing: 2px;
+    text-transform: none;
+    padding-bottom: 6px;
+}
+.theme-medical .section-title::before {
+    counter-increment: medsection;
+    content: counter(section, upper-roman) '.';
+    color: #059669;
+    font-weight: 800;
+    margin-right: 10px;
+    font-size: 14px;
+}
+.theme-medical .exp-header {
+    background: #F0FDF4;
+    padding: 6px 12px;
+    border-radius: 4px;
+    margin-bottom: 6px;
 }
 .theme-medical .exp-company {
     color: #064E3B;
+    font-weight: 700;
+}
+.theme-medical .exp-date {
+    color: #059669;
+    font-size: 12px;
+    font-weight: 600;
+}
+.theme-medical .exp-role {
+    color: #047857;
+    font-style: normal;
+    font-weight: 600;
+    padding-left: 12px;
 }
 .theme-medical .skill-tag {
     background: #ECFDF5;
     color: #047857;
-    border-color: #A7F3D0;
+    border: 1px solid #A7F3D0;
+    border-radius: 4px;
+    font-size: 12px;
+    padding: 3px 12px;
+    position: relative;
 }
-.theme-medical ul li::before {
-    background: #10B981;
+.theme-medical .resume-section ul {
+    counter-reset: medlist;
+}
+.theme-medical .resume-section ul li {
+    counter-increment: medlist;
+    padding-left: 28px;
+    color: #1F2937;
+    font-size: 13.5px;
+    line-height: 1.8;
+}
+.theme-medical .resume-section ul li::before {
+    content: counter(medlist) '.';
+    background: none;
+    color: #059669;
+    font-weight: 700;
+    font-size: 12px;
+    width: auto;
+    height: auto;
+    border-radius: 0;
+    top: 2px;
+    left: 4px;
+}
+.theme-medical .resume-section p {
+    color: #1F2937;
+    font-size: 13.5px;
 }
 
-/* ============ 主题：经典通用 ============ */
+/* ================================================================
+   主题：经典通用 — 传统简历/正式公文风
+   灵感：黑白+红色印章感、宋体/衬线、水平线分隔、端庄大气
+   ================================================================ */
+.theme-classic .resume-inner {
+    background: #FFFFFF;
+    border: 1px solid #E5E5E5;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
 .theme-classic .resume-header {
-    border-bottom: 1px solid #999;
+    text-align: center;
+    border-bottom: 2px solid #111;
+    padding-bottom: 20px;
+    margin-bottom: 24px;
+    position: relative;
+}
+.theme-classic .resume-header::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: #111;
 }
 .theme-classic .resume-header h1 {
     color: #111;
-    font-family: 'Georgia', 'SimSun', serif;
-    letter-spacing: 4px;
+    font-family: 'Georgia', 'SimSun', 'Songti SC', serif;
+    font-size: 32px;
+    letter-spacing: 8px;
+    font-weight: 700;
+}
+.theme-classic .resume-header .contact-info {
+    color: #555;
+    font-size: 13px;
+    letter-spacing: 1px;
+    gap: 6px 24px;
 }
 .theme-classic .section-title {
-    color: #333;
-    border-bottom: 1px solid #999;
-    font-family: 'Georgia', 'SimSun', serif;
+    color: #111;
+    font-family: 'Georgia', 'SimSun', 'Songti SC', serif;
+    border-bottom: 1px solid #111;
     text-transform: none;
-    letter-spacing: 2px;
+    letter-spacing: 4px;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 4px 0 6px 0;
+    position: relative;
+}
+.theme-classic .section-title::before {
+    content: '\25A0';
+    color: #C0392B;
+    margin-right: 10px;
+    font-size: 10px;
+    vertical-align: middle;
 }
 .theme-classic .exp-company {
     color: #111;
+    font-family: 'Georgia', 'SimSun', serif;
+    font-weight: 700;
+    font-size: 15px;
+}
+.theme-classic .exp-date {
+    color: #555;
+    font-size: 13px;
+}
+.theme-classic .exp-role {
+    color: #333;
+    font-style: normal;
+    font-weight: 600;
+    border-bottom: 1px dotted #ccc;
+    display: inline-block;
+    padding-bottom: 1px;
 }
 .theme-classic .skill-tag {
-    background: #F5F5F5;
-    color: #333;
-    border-color: #CCC;
-    border-radius: 2px;
+    background: #FFFFFF;
+    color: #111;
+    border: 1px solid #333;
+    border-radius: 0;
+    font-size: 12px;
+    padding: 3px 14px;
+    font-family: 'Georgia', 'SimSun', serif;
 }
-.theme-classic ul li::before {
-    background: #333;
+.theme-classic .resume-section ul li {
+    font-family: 'Georgia', 'SimSun', 'PingFang SC', serif;
+    font-size: 14px;
+    color: #222;
+    padding-left: 18px;
+    line-height: 1.9;
+}
+.theme-classic .resume-section ul li::before {
+    content: '';
+    background: #C0392B;
+    width: 5px;
+    height: 5px;
+    border-radius: 0;
+    top: 12px;
+}
+.theme-classic .resume-section p {
+    font-family: 'Georgia', 'SimSun', 'PingFang SC', serif;
+    font-size: 14px;
+    color: #222;
 }
 
 /* ============ 回退渲染样式（Markdown 直接渲染时） ============ */
@@ -1032,31 +1512,39 @@ textarea.jd-input {
     color: var(--text-secondary);
     font-size: 12px;
     cursor: pointer;
-    transition: var(--transition);
+    transition: all 0.25s ease;
 }
 
 .theme-btn .theme-dot {
-    width: 10px;
-    height: 10px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     display: inline-block;
+    transition: transform 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
-.theme-btn[data-theme="tech"] .theme-dot { background: #6366F1; }
-.theme-btn[data-theme="finance"] .theme-dot { background: #B8860B; }
-.theme-btn[data-theme="creative"] .theme-dot { background: #EC4899; }
-.theme-btn[data-theme="medical"] .theme-dot { background: #10B981; }
-.theme-btn[data-theme="classic"] .theme-dot { background: #666; }
+.theme-btn[data-theme="tech"] .theme-dot { background: linear-gradient(135deg, #6366F1, #312E81); }
+.theme-btn[data-theme="finance"] .theme-dot { background: linear-gradient(135deg, #C9A84C, #1B365D); }
+.theme-btn[data-theme="creative"] .theme-dot { background: linear-gradient(135deg, #EC4899, #A855F7); }
+.theme-btn[data-theme="medical"] .theme-dot { background: linear-gradient(135deg, #10B981, #064E3B); }
+.theme-btn[data-theme="classic"] .theme-dot { background: linear-gradient(135deg, #C0392B, #111); }
 
 .theme-btn.active {
     background: var(--bg-hover);
     border-color: var(--primary-light);
     color: var(--text-primary);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.theme-btn.active .theme-dot {
+    transform: scale(1.2);
 }
 
 .theme-btn:hover:not(.active) {
     border-color: var(--primary-light);
     color: var(--text-primary);
+    transform: translateY(-1px);
 }
 
 .original-resume {
@@ -1125,31 +1613,52 @@ textarea.jd-input {
 
 .version-selector {
     display: flex;
-    gap: 8px;
+    gap: 10px;
     margin-bottom: 16px;
     flex-wrap: wrap;
 }
 
 .version-btn {
-    padding: 8px 16px;
-    border-radius: 20px;
+    padding: 8px 18px;
+    border-radius: 8px;
     border: 1px solid var(--border);
     background: transparent;
     color: var(--text-secondary);
     font-size: 13px;
     cursor: pointer;
-    transition: var(--transition);
+    transition: all 0.25s ease;
+    position: relative;
+    font-weight: 500;
 }
 
+.version-btn::before {
+    display: inline-block;
+    margin-right: 6px;
+    font-size: 11px;
+    opacity: 0.6;
+}
+
+.version-btn[data-version="0"]::before { content: '\2699'; } /* 齿轮 - 技能 */
+.version-btn[data-version="1"]::before { content: '\2605'; } /* 星 - 项目 */
+.version-btn[data-version="2"]::before { content: '\2702'; } /* 剪刀 - 精简 */
+
 .version-btn.active {
-    background: var(--primary);
-    border-color: var(--primary);
+    background: linear-gradient(135deg, var(--primary), #7C3AED);
+    border-color: transparent;
     color: white;
+    box-shadow: 0 3px 12px rgba(124,58,237,0.3);
+    transform: translateY(-1px);
+}
+
+.version-btn.active::before {
+    opacity: 1;
 }
 
 .version-btn:hover:not(.active) {
     border-color: var(--primary-light);
     color: var(--primary-light);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 @media (max-width: 768px) {
