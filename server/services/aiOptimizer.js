@@ -7,8 +7,12 @@ const API_KEY = process.env.LLM_API_KEY || process.env.OPENAI_API_KEY;
 const BASE_URL = process.env.LLM_BASE_URL || process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
 const MODEL = process.env.LLM_MODEL || 'gpt-4o-mini';
 
-// 单次 API 调用超时时间（60秒）
-const API_TIMEOUT = 60000;
+// 单次 API 调用超时时间（120秒，长简历+长JD需要更多生成时间）
+const API_TIMEOUT = 120000;
+
+// 简历和JD的最大字符数限制（避免 prompt 过长导致超时或 token 超限）
+const MAX_RESUME_CHARS = 5000;
+const MAX_JD_CHARS = 3000;
 
 /**
  * 调用 LLM API（带超时控制）
@@ -58,6 +62,7 @@ async function callLLM(prompt, maxTokens = 4000, options = {}) {
 
         if (!response.ok) {
             const error = await response.json().catch(() => ({}));
+            console.error(`[callLLM] API返回错误 ${response.status}:`, JSON.stringify(error.error || error));
             throw new Error(error.error?.message || `AI 服务返回 ${response.status}`);
         }
 
@@ -211,13 +216,16 @@ async function optimize(resume, jd, configs) {
  * 分析简历与JD的匹配度
  */
 async function analyzeMatch(resume, jd) {
+    const trimmedResume = resume.substring(0, MAX_RESUME_CHARS);
+    const trimmedJd = jd.substring(0, MAX_JD_CHARS);
+    
     const prompt = `请分析以下简历与职位描述的匹配度。
 
 简历内容：
-${resume}
+${trimmedResume}
 
 职位描述：
-${jd}
+${trimmedJd}
 
 请以 JSON 格式返回分析结果（不要包含任何其他文字，只返回 JSON）：
 {
@@ -306,16 +314,17 @@ ${jd.substring(0, 800)}
  * 这是最可靠的方案 — 不依赖解析 AI 输出格式。
  */
 async function generateVersions(resume, jd, configs) {
-    console.log('[generateVersions v4] 开始串行生成三个版本...');
+    console.log('[generateVersions v4] 开始并行生成三个版本...');
     
     const versionPrompts = getVersionPrompts(resume, jd);
-    const versions = [];
     
-    for (let i = 0; i < 3; i++) {
-        console.log(`[generateVersions v4] 正在生成版本${i + 1}...`);
-        const version = await generateSingleVersion(versionPrompts[i], i);
-        versions.push(version);
-    }
+    // 并行生成三个版本（减少总等待时间）
+    const versions = await Promise.all(
+        versionPrompts.map((prompt, i) => {
+            console.log(`[generateVersions v4] 启动版本${i + 1}生成...`);
+            return generateSingleVersion(prompt, i);
+        })
+    );
     
     console.log('[generateVersions v4] 版本长度:', 
         versions.map((v, i) => `v${i+1}=${v.length}`).join(', '));
@@ -327,7 +336,17 @@ async function generateVersions(resume, jd, configs) {
  * 构造三个版本的 prompt（极大化差异）
  */
 function getVersionPrompts(resume, jd) {
-    const commonSuffix = `\n\n---\n\n职位描述（JD）：\n${jd}\n\n---\n\n原始简历内容：\n${resume}\n\n---\n\n【输出格式要求】\n使用标准 Markdown 格式输出简历：# 姓名，## 板块标题，### 公司/项目名，- 列表项。\n直接输出简历正文，不要有任何额外说明。`;
+    // 截断过长的简历和JD，避免 prompt token 超限
+    const trimmedResume = resume.length > MAX_RESUME_CHARS 
+        ? resume.substring(0, MAX_RESUME_CHARS) + '\n\n[简历内容过长，已截断]' 
+        : resume;
+    const trimmedJd = jd.length > MAX_JD_CHARS 
+        ? jd.substring(0, MAX_JD_CHARS) + '\n\n[JD内容过长，已截断]' 
+        : jd;
+    
+    console.log(`[getVersionPrompts] 简历长度: ${resume.length}→${trimmedResume.length}, JD长度: ${jd.length}→${trimmedJd.length}`);
+    
+    const commonSuffix = `\n\n---\n\n职位描述（JD）：\n${trimmedJd}\n\n---\n\n原始简历内容：\n${trimmedResume}\n\n---\n\n【输出格式要求】\n使用标准 Markdown 格式输出简历：# 姓名，## 板块标题，### 公司/项目名，- 列表项。\n直接输出简历正文，不要有任何额外说明。`;
 
     return [
         // ========= 版本一：技能匹配版 =========
@@ -416,19 +435,47 @@ async function generateSingleVersion(prompt, versionIndex) {
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
             const seed = Date.now() + versionIndex * 10000 + attempt * 99999;
+            console.log(`[generateSingleVersion] 版本${versionIndex + 1} 第${attempt + 1}次尝试, prompt长度: ${prompt.length}, maxTokens: ${maxTokens}, temp: ${temperature}`);
+            
             const result = await callLLM(prompt, maxTokens, { temperature, seed });
+            console.log(`[generateSingleVersion] 版本${versionIndex + 1} AI返回长度: ${result?.length || 0}`);
+            
+            if (!result || result.length < 20) {
+                console.warn(`[generateSingleVersion] 版本${versionIndex + 1} AI返回内容为空或过短`);
+                if (attempt < MAX_RETRIES) continue;
+                return `（版本${versionIndex + 1}生成失败，请重试）`;
+            }
+            
             const cleaned = cleanAIOutput(result);
+            console.log(`[generateSingleVersion] 版本${versionIndex + 1} cleanAIOutput后长度: ${cleaned?.length || 0}`);
+            
+            if (!cleaned || cleaned.length < 20) {
+                console.warn(`[generateSingleVersion] 版本${versionIndex + 1} cleanAIOutput清洗后内容过短，使用原始结果`);
+                // cleanAIOutput 过度清洗了，直接用原始结果
+                const fallback = result.trim();
+                if (isOutputGarbled(fallback)) {
+                    console.warn(`[generateSingleVersion] 版本${versionIndex + 1} 原始结果也被判为乱码`);
+                    if (attempt < MAX_RETRIES) continue;
+                    return `（版本${versionIndex + 1}生成失败，请重试）`;
+                }
+                return fallback;
+            }
             
             if (isOutputGarbled(cleaned)) {
                 console.warn(`[generateSingleVersion] 版本${versionIndex + 1} 第${attempt + 1}次检测到乱码`);
                 if (attempt < MAX_RETRIES) continue;
+                // 最后一次重试也乱码，但如果长度够就勉强返回
+                if (cleaned.length > 200) {
+                    console.warn(`[generateSingleVersion] 版本${versionIndex + 1} 乱码但长度>200，勉强使用`);
+                    return cleaned;
+                }
                 return `（版本${versionIndex + 1}生成失败，请重试）`;
             }
             
             console.log(`[generateSingleVersion] 版本${versionIndex + 1} 生成成功，长度: ${cleaned.length}`);
             return cleaned;
         } catch (error) {
-            console.error(`版本${versionIndex + 1}生成失败(第${attempt + 1}次):`, error);
+            console.error(`版本${versionIndex + 1}生成失败(第${attempt + 1}次):`, error.message || error);
             if (attempt >= MAX_RETRIES) return `（版本${versionIndex + 1}生成失败，请重试）`;
         }
     }
@@ -439,10 +486,14 @@ async function generateSingleVersion(prompt, versionIndex) {
  * 检测 AI 输出是否包含大量乱码/无意义内容
  */
 function isOutputGarbled(text) {
-    if (!text) return true;
+    if (!text) { console.log('[isOutputGarbled] 内容为空'); return true; }
     
+    // 放宽最低行数要求：只要有内容就行
     const lines = text.split('\n').filter(l => l.trim());
-    if (lines.length < 3) return true; // 内容太少
+    if (lines.length < 2) { console.log('[isOutputGarbled] 非空行太少:', lines.length); return true; }
+    
+    // 最低字数要求
+    if (text.length < 50) { console.log('[isOutputGarbled] 总字数太少:', text.length); return true; }
     
     let garbageCount = 0;
     let totalContentLines = 0;
@@ -460,8 +511,9 @@ function isOutputGarbled(text) {
         }
     }
     
-    // 如果 >20% 的内容行是乱码，判定为整体质量差
-    if (totalContentLines > 0 && garbageCount / totalContentLines > 0.2) {
+    // 如果 >30% 的内容行是乱码（放宽阈值），判定为整体质量差
+    if (totalContentLines > 0 && garbageCount / totalContentLines > 0.3) {
+        console.log(`[isOutputGarbled] 乱码比例过高: ${garbageCount}/${totalContentLines} = ${(garbageCount/totalContentLines*100).toFixed(0)}%`);
         return true;
     }
     
@@ -480,7 +532,10 @@ function isOutputGarbled(text) {
         prevLine = trimmed;
     }
     
-    if (maxRepeat >= 3) return true; // 同一行重复 4 次以上
+    if (maxRepeat >= 5) { // 放宽：同一行重复 6 次以上才判定
+        console.log('[isOutputGarbled] 连续重复行过多:', maxRepeat);
+        return true;
+    }
     
     return false;
 }
@@ -496,35 +551,53 @@ function cleanAIOutput(text) {
     let endIdx = lines.length - 1;
     
     // 找到第一个 # 开头的行作为起始
+    let foundHash = false;
     for (let i = 0; i < lines.length; i++) {
         if (lines[i].trim().startsWith('#')) {
             startIdx = i;
+            foundHash = true;
             break;
         }
     }
     
+    // 如果没有 # 标题行，说明是纯文本格式的简历，保留全部内容
+    if (!foundHash) {
+        console.log('[cleanAIOutput] 未找到 # 标题行，保留全部内容');
+        return text.trim();
+    }
+    
     // 从末尾去掉非简历内容（如 "以上是优化后的简历"、"---" 分隔线后的说明）
+    // 但要保守操作：如果清掉太多（超过30%），就放弃清洗
+    const originalEndIdx = lines.length - 1;
     for (let i = lines.length - 1; i >= startIdx; i--) {
         const t = lines[i].trim();
         if (!t || t === '---') {
             endIdx = i - 1;
             continue;
         }
-        // 如果最后几行不是以 - # * 数字 开头，可能是说明文字
+        // 如果最后几行是以 - # * 数字 开头，或包含冒号/竖线，认为是简历内容
         if (t.startsWith('#') || t.startsWith('-') || t.startsWith('*') || /^\d/.test(t) || t.includes('：') || t.includes(':') || t.includes('|') || t.includes('｜')) {
             endIdx = i;
             break;
         }
-        // 短的补充说明
-        if (t.length > 50 && !t.startsWith('**')) {
+        // 如果是以 "以上" "注意" "说明" 等开头的说明文字，跳过
+        if (/^(以上|注意|说明|备注|提示|Note)/i.test(t)) {
             endIdx = i - 1;
-        } else {
-            endIdx = i;
-            break;
+            continue;
         }
+        // 其他情况保守处理：保留
+        endIdx = i;
+        break;
     }
     
-    return lines.slice(startIdx, endIdx + 1).join('\n').trim();
+    // 安全检查：如果清洗后内容不到原文的 50%，说明清洗过度了，回退
+    const result = lines.slice(startIdx, endIdx + 1).join('\n').trim();
+    if (result.length < text.trim().length * 0.5) {
+        console.warn(`[cleanAIOutput] 清洗后长度(${result.length})不到原文(${text.trim().length})的50%，回退使用原文`);
+        return text.trim();
+    }
+    
+    return result;
 }
 
 /**
